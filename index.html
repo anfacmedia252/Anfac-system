@@ -78,23 +78,45 @@
     <!-- Dedicated Print Container -->
     <div id="print-mount"></div>
 
-    <!-- SECURE LOGIN GATE OVERLAY -->
+    <!-- SIMULATED EMAIL OTP DISPATCH NOTIFICATION BANNER -->
+    <div id="otp-email-banner" class="hidden fixed top-5 left-1/2 -translate-x-1/2 z-[60] w-full max-w-md bg-slate-900 border-2 border-emerald-500 rounded-2xl p-4 shadow-2xl text-xs">
+        <div class="flex items-start justify-between gap-3">
+            <div class="flex items-start gap-3">
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 text-base">
+                    <i class="fa-solid fa-envelope-circle-check"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 block">ANFAC Security Mailer • OTP Dispatched</span>
+                    <p class="text-white font-bold mt-0.5">To: <span id="otp-banner-email" class="text-sky-400 font-mono"></span></p>
+                    <p class="text-slate-300 mt-1">Your Admin Password Reset OTP Code is:</p>
+                    <div class="mt-2 flex items-center gap-2">
+                        <span id="otp-banner-code" class="px-3 py-1.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 font-mono text-base font-black tracking-widest text-emerald-300">------</span>
+                        <button type="button" onclick="autoFillOtpCode()" class="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg text-[10px] transition">
+                            Auto-Fill OTP
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <button onclick="document.getElementById('otp-email-banner').classList.add('hidden')" class="text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- SECURE LOGIN GATE OVERLAY (WITH ADMIN EMAIL OTP PASSWORD RESET) -->
     <div id="auth-overlay" class="fixed inset-0 z-50 bg-anfac-dark/95 backdrop-blur-xl flex items-center justify-center p-4">
         <div class="glass-panel w-full max-w-md rounded-3xl p-8 border border-anfac-border shadow-2xl space-y-6 text-center">
-            <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-red-600 via-blue-600 to-sky-400 flex items-center justify-center p-3 shadow-lg shadow-blue-600/30">
-                <svg viewBox="0 0 100 100" class="w-full h-full text-white fill-current">
-                    <polygon points="50,15 15,85 85,85" fill="none" stroke="currentColor" stroke-width="12"/>
-                    <polygon points="50,30 35,70 65,70" fill="currentColor"/>
-                    <polyline points="20,75 50,40 80,25" fill="none" stroke="#38BDF8" stroke-width="10" stroke-linecap="round"/>
-                    <polygon points="80,25 65,25 80,40" fill="#38BDF8"/>
-                </svg>
+            <!-- Official ANFAC Media Logo -->
+            <div class="w-24 h-24 mx-auto rounded-full bg-white p-1 shadow-xl shadow-blue-600/20 flex items-center justify-center overflow-hidden">
+                <img id="auth-logo-img" src="src/logo.png.png" onerror="this.onerror=null; this.src=DEFAULT_COMPANY_LOGO;" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
             </div>
             <div>
                 <h1 class="text-2xl font-black text-white tracking-wider">ANFAC <span class="text-anfac-red text-sm">MEDIA SYSTEM</span></h1>
-                <p class="text-xs text-slate-400 mt-1">Executive & Staff Portal Authentication</p>
+                <p class="text-xs text-slate-400 mt-1" id="auth-subtitle">Executive & Staff Portal Authentication</p>
             </div>
 
-            <form onsubmit="handleLogin(event)" class="space-y-4 text-left text-xs">
+            <!-- STANDARD SIGN IN FORM -->
+            <form id="login-form-panel" onsubmit="handleLogin(event)" class="space-y-4 text-left text-xs">
                 <div>
                     <label class="block text-slate-400 mb-1 font-semibold">Username</label>
                     <div class="relative flex items-center">
@@ -103,7 +125,12 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block text-slate-400 mb-1 font-semibold">Password</label>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="text-slate-400 font-semibold">Password</label>
+                        <button type="button" onclick="openForgotPassPanel()" class="text-[11px] text-sky-400 hover:text-sky-300 font-semibold transition">
+                            Forgot Admin Password?
+                        </button>
+                    </div>
                     <div class="relative flex items-center">
                         <i class="fa-solid fa-lock absolute left-3.5 text-slate-500"></i>
                         <input type="password" id="login-pass" required placeholder="Enter password..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-white outline-none focus:border-blue-500 transition">
@@ -118,6 +145,59 @@
                     </button>
                 </div>
             </form>
+
+            <!-- ADMIN PASSWORD RESET: STEP 1 (REQUEST EMAIL OTP) -->
+            <form id="forgot-step1-panel" onsubmit="handleSendResetOtp(event)" class="hidden space-y-4 text-left text-xs">
+                <div class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-slate-300 text-[11px] leading-relaxed">
+                    <i class="fa-solid fa-shield-halved text-sky-400 mr-1"></i>
+                    Enter your registered Super Administrator email address to receive a 6-digit one-time verification code (OTP).
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1 font-semibold">Registered Admin Email</label>
+                    <div class="relative flex items-center">
+                        <i class="fa-solid fa-envelope absolute left-3.5 text-slate-500"></i>
+                        <input type="email" id="reset-email-input" required placeholder="e.g., Engjoseph@anfacmedia.com" class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-white outline-none focus:border-sky-500 transition">
+                    </div>
+                </div>
+                <div id="reset-step1-error" class="hidden text-red-400 text-[11px] font-semibold text-center bg-red-500/10 border border-red-500/20 rounded-xl py-2 px-3"></div>
+                <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="backToLoginPanel()" class="w-1/3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition">
+                        Back
+                    </button>
+                    <button type="submit" class="w-2/3 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-paper-plane"></i> Send OTP Code
+                    </button>
+                </div>
+            </form>
+
+            <!-- ADMIN PASSWORD RESET: STEP 2 (VERIFY OTP & SET NEW PASSWORD) -->
+            <form id="forgot-step2-panel" onsubmit="handleVerifyOtpAndReset(event)" class="hidden space-y-3.5 text-left text-xs">
+                <div class="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-[11px]">
+                    <i class="fa-solid fa-circle-check mr-1"></i>
+                    A 6-digit verification code has been sent to your registered admin email.
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1 font-semibold">6-Digit Email OTP Code</label>
+                    <input type="text" id="reset-otp-input" required maxlength="6" placeholder="Enter 6-digit OTP..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-center font-mono text-base font-black tracking-widest text-emerald-400 outline-none focus:border-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1 font-semibold">New Admin Password</label>
+                    <input type="password" id="reset-new-pass" required minlength="4" placeholder="Enter new password..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1 font-semibold">Confirm New Password</label>
+                    <input type="password" id="reset-confirm-pass" required minlength="4" placeholder="Confirm new password..." class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white outline-none focus:border-blue-500">
+                </div>
+                <div id="reset-step2-error" class="hidden text-red-400 text-[11px] font-semibold text-center bg-red-500/10 border border-red-500/20 rounded-xl py-2 px-3"></div>
+                <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="openForgotPassPanel()" class="w-1/3 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold rounded-xl transition">
+                        Resend
+                    </button>
+                    <button type="submit" class="w-2/3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-key"></i> Verify & Reset Password
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -125,13 +205,8 @@
     <aside class="w-full md:w-64 bg-anfac-card border-r border-anfac-border flex flex-col shrink-0 z-20">
         <div class="p-5 border-b border-anfac-border flex items-center justify-between">
             <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateHome()">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-red-600 via-blue-600 to-sky-400 flex items-center justify-center p-2 shadow-lg shadow-blue-600/30">
-                    <svg viewBox="0 0 100 100" class="w-full h-full text-white fill-current">
-                        <polygon points="50,15 15,85 85,85" fill="none" stroke="currentColor" stroke-width="12"/>
-                        <polygon points="50,30 35,70 65,70" fill="currentColor"/>
-                        <polyline points="20,75 50,40 80,25" fill="none" stroke="#38BDF8" stroke-width="10" stroke-linecap="round"/>
-                        <polygon points="80,25 65,25 80,40" fill="#38BDF8"/>
-                    </svg>
+                <div class="w-11 h-11 rounded-full bg-white flex items-center justify-center p-0.5 shadow-lg shadow-blue-600/20 shrink-0 overflow-hidden">
+                    <img id="sidebar-logo-img" src="src/logo.png.png" onerror="this.onerror=null; this.src=DEFAULT_COMPANY_LOGO;" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
                 </div>
                 <div>
                     <h1 class="font-black text-lg leading-none text-white tracking-wider flex items-center gap-1">
@@ -1137,7 +1212,7 @@
                         <input type="text" id="input-last-name" value="Hassan" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white outline-none">
                     </div>
                     <div>
-                        <label class="block text-slate-400 mb-1">Official Email</label>
+                        <label class="block text-slate-400 mb-1">Official Email (Used for OTP Password Reset)</label>
                         <input type="email" id="input-email" value="Engjoseph@anfacmedia.com" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white outline-none">
                     </div>
                     <div>
@@ -1188,7 +1263,7 @@
                 <div class="flex items-center justify-between pb-3 border-b border-anfac-border">
                     <div>
                         <span class="font-bold text-white block">Official Company Logo (Receipts & Invoices)</span>
-                        <span class="text-slate-400">Automatically brands A5 receipts, invoices, and A4 reports</span>
+                        <span class="text-slate-400">Automatically brands Login, Sidebar, A5 receipts, invoices, and A4 reports</span>
                     </div>
                     <input type="file" accept="image/*" onchange="handleCompanyLogoUpload(event)" class="text-[10px] text-slate-400 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:font-bold cursor-pointer">
                 </div>
@@ -1591,8 +1666,31 @@
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
     <script>
-        const STORAGE_KEY = 'ANFAC_MEDIA_STATE_V7';
-        const DEFAULT_COMPANY_LOGO = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230284c7'/><polygon points='50,15 15,85 85,85' fill='none' stroke='white' stroke-width='10'/><polygon points='50,30 35,70 65,70' fill='white'/></svg>";
+        const STORAGE_KEY = 'ANFAC_MEDIA_STATE_V8';
+
+        // Exact Vector Recreation of your uploaded ANFAC Media Logo
+        const DEFAULT_COMPANY_LOGO = "data:image/svg+xml;utf8," + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
+            <defs>
+                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#1A1B4B"/>
+                    <stop offset="55%" stop-color="#2B2450"/>
+                    <stop offset="100%" stop-color="#E6392E"/>
+                </linearGradient>
+            </defs>
+            <circle cx="250" cy="250" r="240" fill="#ffffff" stroke="url(#ringGrad)" stroke-width="10"/>
+            <!-- Red Stylized A -->
+            <path d="M225 65 L265 65 L350 285 L292 285 L268 225 L220 225 L140 265 Z" fill="#E6392E"/>
+            <!-- White Circle & Play Triangle inside A -->
+            <circle cx="242" cy="145" r="26" fill="#ffffff"/>
+            <polygon points="237,134 237,156 254,145" fill="#E6392E"/>
+            <!-- Navy Zig-Zag Upward Arrow -->
+            <polygon points="120,295 215,175 245,198 308,125 294,112 362,92 342,162 328,148 248,248 215,222" fill="#1A1B4B"/>
+            <!-- ANFAC Text -->
+            <text x="245" y="362" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="68" fill="#E6392E" letter-spacing="2">ANFAC</text>
+            <!-- Media Text -->
+            <text x="310" y="415" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="600" font-size="52" fill="#1A1B4B">Media</text>
+        </svg>`);
 
         const DEFAULT_DATA = {
             currentUser: null,
@@ -1686,6 +1784,7 @@
         };
 
         let state = {};
+        let activeResetOtp = null;
         let revenueChartInstance = null;
         let expenseChartInstance = null;
         let channelChartInstance = null;
@@ -1710,7 +1809,7 @@
                     canvas.height = h;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, w, h);
-                    callback(canvas.toDataURL('image/jpeg', 0.82));
+                    callback(canvas.toDataURL('image/jpeg', 0.85));
                 };
                 img.onerror = function() {
                     callback(e.target.result);
@@ -1721,11 +1820,14 @@
         }
 
         function loadStorage() {
-            const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('ANFAC_MEDIA_STATE_V6');
+            const saved = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('ANFAC_MEDIA_STATE_V7');
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
                     state = { ...JSON.parse(JSON.stringify(DEFAULT_DATA)), ...parsed };
+                    if (!state.companyLogo || state.companyLogo.includes('polygon points=\'50,15')) {
+                        state.companyLogo = DEFAULT_COMPANY_LOGO;
+                    }
                 } catch(e) {
                     state = JSON.parse(JSON.stringify(DEFAULT_DATA));
                 }
@@ -1786,7 +1888,7 @@
         function resetAllData() {
             if (confirm("Reset all data to default demonstration state?")) {
                 localStorage.removeItem(STORAGE_KEY);
-                localStorage.removeItem('ANFAC_MEDIA_STATE_V6');
+                localStorage.removeItem('ANFAC_MEDIA_STATE_V7');
                 loadStorage();
                 renderAllViews();
                 syncProfileUI();
@@ -1806,14 +1908,98 @@
             checkSessionAuth();
         });
 
-        // ================= AUTHENTICATION & ROLE ROUTING =================
+        // ================= AUTHENTICATION & ADMIN OTP PASSWORD RESET =================
         function checkSessionAuth() {
             if (state.currentUser) {
                 document.getElementById('auth-overlay').classList.add('hidden');
+                document.getElementById('otp-email-banner').classList.add('hidden');
                 applyRolePermissions();
             } else {
                 document.getElementById('auth-overlay').classList.remove('hidden');
+                backToLoginPanel();
             }
+        }
+
+        function openForgotPassPanel() {
+            document.getElementById('login-form-panel').classList.add('hidden');
+            document.getElementById('forgot-step2-panel').classList.add('hidden');
+            document.getElementById('forgot-step1-panel').classList.remove('hidden');
+            document.getElementById('reset-step1-error').classList.add('hidden');
+            document.getElementById('auth-subtitle').innerText = 'Admin Password Reset • Email OTP Verification';
+            document.getElementById('reset-email-input').value = state.profile?.email || 'Engjoseph@anfacmedia.com';
+        }
+
+        function backToLoginPanel() {
+            document.getElementById('forgot-step1-panel').classList.add('hidden');
+            document.getElementById('forgot-step2-panel').classList.add('hidden');
+            document.getElementById('login-form-panel').classList.remove('hidden');
+            document.getElementById('auth-subtitle').innerText = 'Executive & Staff Portal Authentication';
+        }
+
+        function handleSendResetOtp(e) {
+            e.preventDefault();
+            const enteredEmail = document.getElementById('reset-email-input').value.trim().toLowerCase();
+            const adminEmail = (state.profile?.email || 'Engjoseph@anfacmedia.com').trim().toLowerCase();
+            const errEl = document.getElementById('reset-step1-error');
+
+            if (enteredEmail !== adminEmail) {
+                errEl.innerText = `Email does not match the registered Admin email (${state.profile?.email || 'Engjoseph@anfacmedia.com'}).`;
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            errEl.classList.add('hidden');
+            activeResetOtp = Math.floor(100000 + Math.random() * 900000).toString();
+
+            // Display simulated email OTP notification banner so Admin receives OTP immediately
+            document.getElementById('otp-banner-email').innerText = state.profile?.email || 'Engjoseph@anfacmedia.com';
+            document.getElementById('otp-banner-code').innerText = activeResetOtp;
+            document.getElementById('otp-email-banner').classList.remove('hidden');
+
+            document.getElementById('forgot-step1-panel').classList.add('hidden');
+            document.getElementById('forgot-step2-panel').classList.remove('hidden');
+            document.getElementById('reset-step2-error').classList.add('hidden');
+            document.getElementById('reset-otp-input').value = '';
+            document.getElementById('reset-new-pass').value = '';
+            document.getElementById('reset-confirm-pass').value = '';
+            showToast(`6-Digit OTP sent to ${state.profile?.email}`);
+        }
+
+        function autoFillOtpCode() {
+            if (activeResetOtp) {
+                document.getElementById('reset-otp-input').value = activeResetOtp;
+            }
+        }
+
+        function handleVerifyOtpAndReset(e) {
+            e.preventDefault();
+            const otpInp = document.getElementById('reset-otp-input').value.trim();
+            const newPass = document.getElementById('reset-new-pass').value.trim();
+            const confirmPass = document.getElementById('reset-confirm-pass').value.trim();
+            const errEl = document.getElementById('reset-step2-error');
+
+            if (!activeResetOtp || otpInp !== activeResetOtp) {
+                errEl.innerText = "Invalid 6-digit OTP verification code. Please check the code and try again.";
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            if (newPass !== confirmPass) {
+                errEl.innerText = "New password and confirmation password do not match.";
+                errEl.classList.remove('hidden');
+                return;
+            }
+
+            state.adminAuth.password = newPass;
+            activeResetOtp = null;
+            saveStorage();
+            syncProfileUI();
+
+            document.getElementById('otp-email-banner').classList.add('hidden');
+            backToLoginPanel();
+            document.getElementById('login-user').value = state.adminAuth.username;
+            document.getElementById('login-pass').value = newPass;
+            showToast("Admin password reset successfully! You can now sign in.");
         }
 
         function handleLogin(e) {
@@ -1913,6 +2099,8 @@
             const logoSrc = state.companyLogo || DEFAULT_COMPANY_LOGO;
             document.getElementById('receipt-company-logo').src = logoSrc;
             document.getElementById('invoice-company-logo').src = logoSrc;
+            document.getElementById('auth-logo-img').src = logoSrc;
+            document.getElementById('sidebar-logo-img').src = logoSrc;
         }
 
         function handleCompanyLogoUpload(e) {
@@ -1922,7 +2110,7 @@
                 state.companyLogo = compressedUrl;
                 saveStorage();
                 syncProfileUI();
-                showToast("Official Company Logo embedded & saved!");
+                showToast("Official ANFAC Media Logo updated & saved across all views!");
             });
         }
 
