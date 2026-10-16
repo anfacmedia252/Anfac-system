@@ -83,11 +83,11 @@
         <div class="glass-panel w-full max-w-md rounded-3xl p-8 border border-anfac-border shadow-2xl space-y-6 text-center">
             <!-- Official ANFAC Media Logo -->
             <div class="w-24 h-24 mx-auto rounded-full bg-white p-1 shadow-xl shadow-blue-600/20 flex items-center justify-center overflow-hidden">
-                <img id="auth-logo-img" src="logo.png.jpg" onerror="this.onerror=null; this.src=DEFAULT_COMPANY_LOGO;" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
+                <img id="auth-logo-img" src="logo.png.jpg" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
             </div>
             <div>
                 <h1 class="text-2xl font-black text-white tracking-wider">ANFAC <span class="text-anfac-red text-sm">MEDIA SYSTEM</span></h1>
-                <p class="text-xs text-slate-400 mt-1" id="auth-subtitle">Executive & Staff Portal Authentication</p>
+                <p class="text-xs text-slate-400 mt-1" id="auth-subtitle">Executive, Staff & Client Portal</p>
             </div>
 
             <!-- STANDARD SIGN IN FORM -->
@@ -119,6 +119,7 @@
                         <i class="fa-solid fa-right-to-bracket"></i> Sign In to System
                     </button>
                 </div>
+                <p class="text-center text-[10px] leading-relaxed text-slate-500">Clients: sign in with the portal username and password provided by ANFAC Media.</p>
             </form>
 
             <!-- ADMIN PASSWORD RESET: STEP 1 (REQUEST REAL EMAIL OTP) -->
@@ -181,7 +182,7 @@
         <div class="p-5 border-b border-anfac-border flex items-center justify-between">
             <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateHome()">
                 <div class="w-11 h-11 rounded-full bg-white flex items-center justify-center p-0.5 shadow-lg shadow-blue-600/20 shrink-0 overflow-hidden">
-                    <img id="sidebar-logo-img" src="logo.png.jpg" onerror="this.onerror=null; this.src=DEFAULT_COMPANY_LOGO;" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
+                    <img id="sidebar-logo-img" src="logo.png.jpg" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
                 </div>
                 <div>
                     <h1 class="font-black text-lg leading-none text-white tracking-wider flex items-center gap-1">
@@ -218,6 +219,12 @@
                 <button onclick="switchView('clients')" id="nav-clients" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-white transition">
                     <i class="fa-solid fa-users-viewfinder w-4 text-center"></i>
                     <span>Clients & Retainers</span>
+                </button>
+
+                <button onclick="switchView('client-inbox')" id="nav-client-inbox" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-white transition">
+                    <i class="fa-solid fa-comments w-4 text-center text-cyan-400"></i>
+                    <span>Client Messages</span>
+                    <span id="client-inbox-unread" class="hidden ml-auto min-w-5 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[9px] font-black text-white">0</span>
                 </button>
 
                 <button onclick="switchView('receipt')" id="nav-receipt" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-white transition">
@@ -288,6 +295,14 @@
                 <button onclick="switchView('staff')" id="nav-director-staff" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-white transition">
                     <i class="fa-solid fa-users-gear w-4 text-center text-teal-400"></i>
                     <span>Manage Staff</span>
+                </button>
+            </div>
+
+            <div id="client-nav-group" class="hidden space-y-1">
+                <div class="px-3 py-2 text-[10px] font-bold uppercase text-slate-500 tracking-wider">Client workspace</div>
+                <button onclick="switchView('client-portal')" id="nav-client-portal" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-white transition">
+                    <i class="fa-solid fa-briefcase w-4 text-center text-sky-400"></i>
+                    <span>My Projects & Messages</span>
                 </button>
             </div>
         </nav>
@@ -566,6 +581,77 @@
             </div>
 
             <div id="clients-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+
+        <!-- VIEW: CLIENT MESSAGES FOR SUPER ADMIN -->
+        <div id="view-client-inbox" class="content-view hidden p-4 sm:p-6 lg:p-8 space-y-6">
+            <section class="rounded-3xl border border-cyan-400/15 bg-gradient-to-br from-slate-950 via-cyan-950/40 to-indigo-950 p-6">
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-300">Client relations</span>
+                <h2 class="mt-2 text-2xl font-black text-white">Client message inbox</h2>
+                <p class="mt-1 text-xs text-slate-400">Reply directly to clients using their private project portal.</p>
+            </section>
+            <section class="grid min-h-[32rem] grid-cols-1 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 lg:grid-cols-[280px_1fr]">
+                <aside class="border-b border-slate-800 p-4 lg:border-b-0 lg:border-r">
+                    <h3 class="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">Conversations</h3>
+                    <div id="admin-client-conversations" class="space-y-2"></div>
+                </aside>
+                <div class="flex min-h-[28rem] flex-col">
+                    <div id="admin-chat-heading" class="border-b border-slate-800 p-4 text-sm font-bold text-white">Select a client conversation</div>
+                    <div id="admin-chat-messages" class="flex-1 space-y-3 overflow-y-auto p-4"></div>
+                    <form id="admin-chat-form" onsubmit="sendAdminClientMessage(event)" class="hidden gap-2 border-t border-slate-800 p-4">
+                        <input id="admin-chat-input" type="text" maxlength="2000" required placeholder="Write a reply to your client..." class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-xs text-white outline-none focus:border-cyan-400">
+                        <button type="submit" class="rounded-xl bg-cyan-500 px-4 py-3 text-xs font-bold text-slate-950 transition hover:bg-cyan-400"><i class="fa-solid fa-paper-plane"></i><span class="ml-2 hidden sm:inline">Send reply</span></button>
+                    </form>
+                </div>
+            </section>
+        </div>
+
+        <!-- VIEW: CLIENT PROJECT PORTAL -->
+        <div id="view-client-portal" class="content-view hidden p-4 sm:p-6 lg:p-8 space-y-6">
+            <section class="relative overflow-hidden rounded-3xl border border-sky-400/15 bg-gradient-to-br from-slate-950 via-sky-950/50 to-indigo-950 p-6 sm:p-8">
+                <div class="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-sky-400/10 blur-3xl"></div>
+                <div class="relative flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <img id="client-portal-logo" src="" alt="Client logo" class="h-16 w-16 rounded-2xl border border-white/10 bg-white object-contain p-1.5">
+                    <div class="min-w-0 flex-1">
+                        <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-300">Your client workspace</span>
+                        <h1 id="client-portal-name" class="mt-1 text-2xl font-black text-white sm:text-3xl">Welcome</h1>
+                        <p class="mt-1 text-xs text-slate-300">Track project progress and message the ANFAC Media team directly.</p>
+                    </div>
+                    <div class="rounded-2xl border border-white/10 bg-slate-950/40 px-5 py-3 sm:text-right">
+                        <span class="block text-[10px] uppercase tracking-wider text-slate-400">Active projects</span>
+                        <span id="client-project-count" class="text-2xl font-black text-white">0</span>
+                    </div>
+                </div>
+            </section>
+            <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 sm:p-6">
+                <div class="mb-5">
+                    <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-300">Work in progress</span>
+                    <h2 class="mt-1 text-lg font-extrabold text-white">Your projects</h2>
+                </div>
+                <div id="client-project-grid" class="grid grid-cols-1 gap-4 lg:grid-cols-2"></div>
+            </section>
+            <section class="grid min-h-[30rem] overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/70 lg:grid-cols-[1fr_320px]">
+                <div class="flex min-h-[26rem] flex-col">
+                    <div class="border-b border-slate-800 p-5">
+                        <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-300">Direct line</span>
+                        <h2 class="mt-1 text-lg font-extrabold text-white">Chat with Super Admin</h2>
+                        <p class="mt-1 text-xs text-slate-400">Send a message about your projects and get a reply here.</p>
+                    </div>
+                    <div id="client-chat-messages" class="flex-1 space-y-3 overflow-y-auto p-4 sm:p-5"></div>
+                    <form id="client-chat-form" onsubmit="sendClientMessage(event)" class="flex gap-2 border-t border-slate-800 p-4">
+                        <input id="client-chat-input" type="text" maxlength="2000" required placeholder="Type your message to Super Admin..." class="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-xs text-white outline-none focus:border-sky-400">
+                        <button type="submit" class="rounded-xl bg-sky-500 px-4 py-3 text-xs font-bold text-slate-950 transition hover:bg-sky-400"><i class="fa-solid fa-paper-plane"></i><span class="ml-2 hidden sm:inline">Send</span></button>
+                    </form>
+                </div>
+                <aside class="border-t border-slate-800 bg-slate-950/40 p-5 lg:border-l lg:border-t-0">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Your account</h3>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">This private workspace shows only projects assigned to your client account. Your messages are shared with the Super Admin on this app installation.</p>
+                    <div class="mt-5 rounded-xl border border-slate-800 bg-slate-900 p-3">
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500">Account</span>
+                        <p id="client-portal-account" class="mt-1 truncate text-xs font-bold text-white"></p>
+                    </div>
+                </aside>
+            </section>
         </div>
 
         <!-- VIEW: RECEIPT GENERATOR (WHITE PAPER PREVIEW + NOTES & TERMS FOR THANK YOU) -->
@@ -1465,6 +1551,21 @@
                     <input type="text" id="client-name" required placeholder="e.g., Banadir Retail Group" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
                 </div>
 
+                <div class="rounded-xl border border-sky-500/20 bg-sky-500/5 p-3">
+                    <p class="mb-2 text-[10px] font-bold uppercase tracking-wider text-sky-300">Client portal login</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="mb-1 block text-slate-400">Username</label>
+                            <input type="text" id="client-username" required autocomplete="off" placeholder="Client login" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-slate-400">Password</label>
+                            <input type="password" id="client-password" autocomplete="new-password" placeholder="New password (leave blank to keep)" class="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-white outline-none">
+                        </div>
+                    </div>
+                    <p id="client-password-hint" class="mt-1.5 text-[9px] text-slate-500">Set a password so this client can sign in to their project portal.</p>
+                </div>
+
                 <div>
                     <label class="block text-slate-400 mb-1">Monthly Retainer Fee ($)</label>
                     <input type="number" id="client-retainer" required placeholder="3500" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
@@ -1502,7 +1603,7 @@
 
     <!-- MODAL: Project (Create & Edit) -->
     <div id="modal-project" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
-        <div class="bg-anfac-card border border-anfac-border w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+        <div class="bg-anfac-card border border-anfac-border w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between border-b border-anfac-border pb-3">
                 <h3 id="modal-proj-title" class="text-sm font-bold text-white">Create New Project / Event</h3>
                 <button onclick="closeProjectModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
@@ -1532,6 +1633,14 @@
                         <option value="In Progress">In Progress</option>
                         <option value="Completed">Completed</option>
                     </select>
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Client-visible progress (%)</label>
+                    <input type="number" id="proj-progress" min="0" max="100" value="0" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                </div>
+                <div>
+                    <label class="block text-slate-400 mb-1">Progress update for client</label>
+                    <textarea id="proj-update" rows="2" maxlength="500" placeholder="Share the latest work completed or next steps..." class="w-full rounded-xl border border-slate-700 bg-slate-900 p-3 text-white outline-none"></textarea>
                 </div>
                 <div class="flex justify-end gap-2 pt-2">
                     <button type="button" onclick="closeProjectModal()" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold">Cancel</button>
@@ -1747,8 +1856,8 @@
                 { id: 'CL-3', name: 'Horn Energy Corp', retainer: 8500, status: 'Pending', campaigns: 1, logo: 'https://placehold.co/100x100/10b981/ffffff?text=HE' }
             ],
             projects: [
-                { id: 'PRJ-1', title: 'Corporate Brand Video 4K', client: 'Horn Energy Corp', category: 'Video Production', deadline: '2026-11-15', status: 'In Progress' },
-                { id: 'PRJ-2', title: 'National TV Commercial', client: 'Banadir Retail Group', category: 'Media Buying', deadline: '2026-10-30', status: 'Planning' }
+                { id: 'PRJ-1', title: 'Corporate Brand Video 4K', client: 'Horn Energy Corp', category: 'Video Production', deadline: '2026-11-15', status: 'In Progress', progress: 55, update: 'Production planning is complete and filming is underway.' },
+                { id: 'PRJ-2', title: 'National TV Commercial', client: 'Banadir Retail Group', category: 'Media Buying', deadline: '2026-10-30', status: 'Planning', progress: 15, update: 'The campaign concept and initial media plan are being prepared.' }
             ],
             bookings: [
                 { id: 'BK-1', title: 'Main Studio Podcast Recording', client: 'Mogadishu Logistics', datetime: '2026-10-18 10:00', status: 'Confirmed' },
@@ -1807,6 +1916,7 @@
                     progress: 67
                 }
             ],
+            clientMessages: [],
             profile: {
                 firstName: 'Eng Yusuf',
                 lastName: 'Hassan',
@@ -1821,6 +1931,7 @@
         let revenueChartInstance = null;
         let expenseChartInstance = null;
         let channelChartInstance = null;
+        let activeClientConversationId = null;
 
         // Auto-compress uploaded images so localStorage never overflows
         function compressImageFile(file, maxSize = 320, callback) {
@@ -1865,6 +1976,15 @@
                         ...staff,
                         accessRole: staff.accessRole === 'director' ? 'director' : 'employee'
                     }));
+                    state.clients = Array.isArray(state.clients) ? state.clients : [];
+                    state.projects = (state.projects || []).map(project => ({
+                        ...project,
+                        progress: Math.max(0, Math.min(100, Number.isFinite(Number(project.progress))
+                            ? Number(project.progress)
+                            : project.status === 'Completed' ? 100 : project.status === 'In Progress' || project.status === 'In Production' ? 50 : 0)),
+                        update: project.update || ''
+                    }));
+                    state.clientMessages = Array.isArray(state.clientMessages) ? state.clientMessages : [];
                     // Ensure Admin Email is set to anfacmedia252@gmail.com
                     if (!state.profile.email || state.profile.email.toLowerCase() === 'engjoseph@anfacmedia.com') {
                         state.profile.email = 'anfacmedia252@gmail.com';
@@ -1879,6 +1999,7 @@
                 ...staff,
                 accessRole: staff.accessRole === 'director' ? 'director' : 'employee'
             }));
+            state.clientMessages = Array.isArray(state.clientMessages) ? state.clientMessages : [];
         }
 
         function saveStorage() {
@@ -1978,7 +2099,7 @@
             document.getElementById('forgot-step1-panel').classList.add('hidden');
             document.getElementById('forgot-step2-panel').classList.add('hidden');
             document.getElementById('login-form-panel').classList.remove('hidden');
-            document.getElementById('auth-subtitle').innerText = 'Executive & Staff Portal Authentication';
+            document.getElementById('auth-subtitle').innerText = 'Executive, Staff & Client Portal';
         }
 
         async function handleSendResetOtp(e) {
@@ -2096,6 +2217,19 @@
                 return;
             }
 
+            const matchedClient = state.clients.find(client =>
+                (client.username || '').toLowerCase() === userInp.toLowerCase() &&
+                client.password === passInp
+            );
+            if (matchedClient) {
+                state.currentUser = { role: 'client', clientId: matchedClient.id };
+                errBox.classList.add('hidden');
+                saveStorage();
+                checkSessionAuth();
+                showToast(`Welcome to your project workspace, ${matchedClient.name}`);
+                return;
+            }
+
             errBox.classList.remove('hidden');
         }
 
@@ -2113,6 +2247,7 @@
                 document.getElementById('admin-nav-group').classList.add('hidden');
                 document.getElementById('staff-nav-group').classList.remove('hidden');
                 document.getElementById('director-nav-group').classList.add('hidden');
+                document.getElementById('client-nav-group').classList.add('hidden');
                 document.getElementById('header-search-container').classList.add('hidden');
                 document.getElementById('sidebar-subtitle').innerText = 'Staff Workspace';
                 renderStaffPortal();
@@ -2128,16 +2263,37 @@
                 document.getElementById('admin-nav-group').classList.add('hidden');
                 document.getElementById('staff-nav-group').classList.add('hidden');
                 document.getElementById('director-nav-group').classList.remove('hidden');
+                document.getElementById('client-nav-group').classList.add('hidden');
                 document.getElementById('header-search-container').classList.add('hidden');
                 document.getElementById('sidebar-subtitle').innerText = 'Director Workspace';
                 document.getElementById('staff-view-title').innerText = 'People & Staff Management';
                 document.getElementById('staff-view-description').innerText = 'Manage employee profiles, assign daily activities, and review each person’s progress and reports.';
                 renderDirectorDashboard();
                 switchView('director-dashboard');
+            } else if (state.currentUser.role === 'client') {
+                const client = state.clients.find(item => item.id === state.currentUser.clientId && item.username && item.password);
+                if (!client) {
+                    state.currentUser = null;
+                    saveStorage();
+                    checkSessionAuth();
+                    return;
+                }
+                document.getElementById('admin-nav-group').classList.add('hidden');
+                document.getElementById('staff-nav-group').classList.add('hidden');
+                document.getElementById('director-nav-group').classList.add('hidden');
+                document.getElementById('client-nav-group').classList.remove('hidden');
+                document.getElementById('header-search-container').classList.add('hidden');
+                document.getElementById('sidebar-subtitle').innerText = 'Client Workspace';
+                document.getElementById('nav-user-fullname').innerText = client.name;
+                document.getElementById('nav-user-role').innerText = 'Client';
+                document.getElementById('nav-avatar-img').src = client.logo || DEFAULT_COMPANY_LOGO;
+                renderClientPortal();
+                switchView('client-portal');
             } else {
                 document.getElementById('admin-nav-group').classList.remove('hidden');
                 document.getElementById('staff-nav-group').classList.add('hidden');
                 document.getElementById('director-nav-group').classList.add('hidden');
+                document.getElementById('client-nav-group').classList.add('hidden');
                 document.getElementById('header-search-container').classList.remove('hidden');
                 document.getElementById('sidebar-subtitle').innerText = 'System Control';
                 document.getElementById('staff-view-title').innerText = 'Team & Staff Management (Admin Oversight)';
@@ -2152,6 +2308,8 @@
                 switchView('staff-portal');
             } else if (state.currentUser?.role === 'director') {
                 switchView('director-dashboard');
+            } else if (state.currentUser?.role === 'client') {
+                switchView('client-portal');
             } else {
                 switchView('dashboard');
             }
@@ -2162,6 +2320,8 @@
                 switchView('staff-portal');
             } else if (state.currentUser?.role === 'director') {
                 switchView('director-dashboard');
+            } else if (state.currentUser?.role === 'client') {
+                switchView('client-portal');
             } else {
                 switchView('profile');
             }
@@ -2191,10 +2351,14 @@
             }
 
             const logoSrc = state.companyLogo || DEFAULT_COMPANY_LOGO;
-            document.getElementById('receipt-company-logo').src = logoSrc;
-            document.getElementById('invoice-company-logo').src = logoSrc;
-            document.getElementById('auth-logo-img').src = logoSrc;
-            document.getElementById('sidebar-logo-img').src = logoSrc;
+            ['receipt-company-logo', 'invoice-company-logo', 'auth-logo-img', 'sidebar-logo-img'].forEach(id => {
+                const image = document.getElementById(id);
+                image.onerror = () => {
+                    image.onerror = null;
+                    image.src = DEFAULT_COMPANY_LOGO;
+                };
+                image.src = logoSrc;
+            });
         }
 
         function handleCompanyLogoUpload(e) {
@@ -2241,6 +2405,8 @@
                 viewName = 'staff-portal';
             } else if (state.currentUser?.role === 'director' && !['director-dashboard', 'staff'].includes(viewName)) {
                 viewName = 'director-dashboard';
+            } else if (state.currentUser?.role === 'client' && viewName !== 'client-portal') {
+                viewName = 'client-portal';
             }
             document.querySelectorAll('.content-view').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -2265,6 +2431,10 @@
             }
             if (state.currentUser?.role === 'director' && viewName === 'director-dashboard') {
                 renderDirectorDashboard();
+            } else if (state.currentUser?.role === 'client' && viewName === 'client-portal') {
+                renderClientPortal();
+            } else if (state.currentUser?.role === 'admin' && viewName === 'client-inbox') {
+                renderAdminClientInbox();
             }
         }
 
@@ -2310,7 +2480,10 @@
                 renderStaffPortal();
             } else if (state.currentUser?.role === 'director') {
                 renderDirectorDashboard();
+            } else if (state.currentUser?.role === 'client') {
+                renderClientPortal();
             }
+            renderClientInboxBadge();
             updateCharts();
         }
 
@@ -2483,6 +2656,10 @@
                         <span class="text-slate-400">Monthly Retainer Fee:</span>
                         <span class="font-mono font-bold text-emerald-400">$${parseFloat(cl.retainer).toLocaleString()}/mo</span>
                     </div>
+                    <div class="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2 text-[10px]">
+                        <span class="text-slate-400">Client portal</span>
+                        <span class="${cl.username && cl.password ? 'font-bold text-emerald-400' : 'font-bold text-amber-400'}">${cl.username && cl.password ? `Enabled · ${escapeHtml(cl.username)}` : 'Login not set'}</span>
+                    </div>
 
                     <div class="flex justify-end items-center space-x-2 pt-1">
                         <button onclick="editClient('${cl.id}')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl font-semibold transition flex items-center gap-1">
@@ -2517,6 +2694,11 @@
                         <h3 class="text-sm font-bold text-white">${p.title}</h3>
                         <p class="text-xs text-slate-400">${p.client}</p>
                     </div>
+                    <div>
+                        <div class="mb-1 flex justify-between text-[10px]"><span class="text-slate-400">Client-visible progress</span><span class="font-bold text-purple-300">${Math.max(0, Math.min(100, Number(p.progress) || 0))}%</span></div>
+                        <div class="h-1.5 overflow-hidden rounded-full bg-slate-800"><div class="h-full rounded-full bg-purple-500" style="width:${Math.max(0, Math.min(100, Number(p.progress) || 0))}%"></div></div>
+                        ${p.update ? `<p class="mt-2 text-[11px] text-slate-400">${p.update}</p>` : ''}
+                    </div>
                     <div class="flex justify-between text-xs text-slate-400 border-t border-slate-800 pt-2 font-mono">
                         <span>${p.category}</span>
                         <span>Due: ${p.deadline}</span>
@@ -2536,6 +2718,212 @@
                 sel.classList.add('bg-purple-600', 'text-white');
             }
             renderProjectsGrid(status);
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, char => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[char]);
+        }
+
+        function getClientForSession() {
+            if (state.currentUser?.role !== 'client') return null;
+            return state.clients.find(client => client.id === state.currentUser.clientId) || null;
+        }
+
+        function formatClientMessageTime(timestamp) {
+            const date = new Date(timestamp);
+            return Number.isNaN(date.getTime()) ? '' : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
+        function renderClientPortal() {
+            const client = getClientForSession();
+            if (!client) return;
+
+            document.getElementById('nav-user-fullname').innerText = client.name;
+            document.getElementById('nav-user-role').innerText = 'Client';
+            document.getElementById('nav-avatar-img').src = client.logo || DEFAULT_COMPANY_LOGO;
+            document.getElementById('client-portal-logo').src = client.logo || DEFAULT_COMPANY_LOGO;
+            document.getElementById('client-portal-name').innerText = `Welcome, ${client.name}`;
+            document.getElementById('client-portal-account').innerText = client.username;
+
+            const projects = state.projects.filter(project =>
+                String(project.client || '').trim().toLowerCase() === client.name.trim().toLowerCase()
+            );
+            document.getElementById('client-project-count').innerText = projects.length.toLocaleString();
+            document.getElementById('client-project-grid').innerHTML = projects.map(project => {
+                const progress = Math.max(0, Math.min(100, Number(project.progress) || 0));
+                const statusColor = project.status === 'Completed' ? 'text-emerald-300 bg-emerald-400/10' :
+                    project.status === 'In Progress' || project.status === 'In Production' ? 'text-sky-300 bg-sky-400/10' :
+                    'text-amber-300 bg-amber-400/10';
+                return `
+                    <article class="rounded-2xl border border-slate-800 bg-slate-950/70 p-5">
+                        <div class="flex flex-wrap items-start justify-between gap-2">
+                            <div>
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-sky-300">${escapeHtml(project.category || 'Project')}</p>
+                                <h3 class="mt-1 text-sm font-extrabold text-white">${escapeHtml(project.title)}</h3>
+                            </div>
+                            <span class="rounded-full px-2.5 py-1 text-[10px] font-bold ${statusColor}">${escapeHtml(project.status || 'Planning')}</span>
+                        </div>
+                        <div class="mt-5">
+                            <div class="mb-2 flex justify-between text-[11px]"><span class="text-slate-400">Project progress</span><span class="font-bold text-sky-300">${progress}%</span></div>
+                            <div class="h-2 overflow-hidden rounded-full bg-slate-800"><div class="h-full rounded-full bg-gradient-to-r from-sky-400 to-indigo-400" style="width:${progress}%"></div></div>
+                        </div>
+                        <p class="mt-4 min-h-10 text-xs leading-relaxed text-slate-300">${escapeHtml(project.update || 'Your project team will share progress updates here.')}</p>
+                        <p class="mt-4 border-t border-slate-800 pt-3 text-[10px] text-slate-500">Target date: ${escapeHtml(project.deadline || 'To be confirmed')}</p>
+                    </article>
+                `;
+            }).join('') || `
+                <div class="col-span-full rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center">
+                    <i class="fa-solid fa-folder-open text-2xl text-sky-300"></i>
+                    <p class="mt-3 text-sm font-bold text-white">No projects assigned yet</p>
+                    <p class="mt-1 text-xs text-slate-400">Message the ANFAC Media team if you have a question about your work.</p>
+                </div>
+            `;
+
+            const messages = state.clientMessages
+                .filter(message => message.clientId === client.id)
+                .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            messages.forEach(message => {
+                if (message.sender === 'admin') message.readByClient = true;
+            });
+            document.getElementById('client-chat-messages').innerHTML = messages.map(message => {
+                const fromClient = message.sender === 'client';
+                return `
+                    <div class="flex ${fromClient ? 'justify-end' : 'justify-start'}">
+                        <article class="max-w-[88%] rounded-2xl ${fromClient ? 'rounded-br-sm bg-sky-500 text-slate-950' : 'rounded-bl-sm border border-slate-700 bg-slate-800 text-white'} px-4 py-3">
+                            <p class="whitespace-pre-wrap break-words text-xs leading-relaxed">${escapeHtml(message.body)}</p>
+                            <p class="mt-2 text-[9px] ${fromClient ? 'text-sky-950/70' : 'text-slate-400'}">${fromClient ? 'You' : 'Super Admin'} · ${escapeHtml(formatClientMessageTime(message.createdAt))}</p>
+                        </article>
+                    </div>
+                `;
+            }).join('') || '<p class="py-10 text-center text-xs text-slate-500">Start a conversation with Super Admin. Your project questions are welcome here.</p>';
+            const chat = document.getElementById('client-chat-messages');
+            chat.scrollTop = chat.scrollHeight;
+            saveStorage();
+            renderClientInboxBadge();
+        }
+
+        function sendClientMessage(event) {
+            event.preventDefault();
+            const client = getClientForSession();
+            const input = document.getElementById('client-chat-input');
+            const body = input.value.trim();
+            if (!client || !body) return;
+            state.clientMessages.push({
+                id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                clientId: client.id,
+                sender: 'client',
+                senderName: client.name,
+                body,
+                createdAt: new Date().toISOString(),
+                readByAdmin: false,
+                readByClient: true
+            });
+            input.value = '';
+            saveStorage();
+            renderClientPortal();
+            showToast('Message sent to Super Admin.');
+        }
+
+        function renderClientInboxBadge() {
+            const badge = document.getElementById('client-inbox-unread');
+            if (!badge) return;
+            const unread = state.clientMessages.filter(message => message.sender === 'client' && !message.readByAdmin).length;
+            badge.innerText = unread > 99 ? '99+' : unread;
+            badge.classList.toggle('hidden', unread === 0);
+        }
+
+        function selectAdminClientConversation(clientId) {
+            activeClientConversationId = clientId;
+            renderAdminClientInbox();
+        }
+
+        function renderAdminClientInbox() {
+            const conversations = document.getElementById('admin-client-conversations');
+            if (!conversations) return;
+            const clientsWithMessages = state.clients;
+            if (!clientsWithMessages.some(client => client.id === activeClientConversationId)) {
+                activeClientConversationId = clientsWithMessages[0]?.id || null;
+            }
+            conversations.innerHTML = clientsWithMessages.map(client => {
+                const thread = state.clientMessages
+                    .filter(message => message.clientId === client.id)
+                    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                const last = thread[thread.length - 1];
+                const unread = thread.filter(message => message.sender === 'client' && !message.readByAdmin).length;
+                const selected = client.id === activeClientConversationId;
+                return `
+                    <button onclick="selectAdminClientConversation('${escapeHtml(client.id)}')" class="w-full rounded-xl border px-3 py-3 text-left transition ${selected ? 'border-cyan-400/30 bg-cyan-400/10' : 'border-slate-800 bg-slate-950/50 hover:border-slate-700'}">
+                        <span class="flex items-center justify-between gap-2">
+                            <span class="truncate text-xs font-bold text-white">${escapeHtml(client.name)}</span>
+                            ${unread ? `<span class="rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-black text-white">${unread}</span>` : ''}
+                        </span>
+                        <span class="mt-1 block truncate text-[10px] text-slate-400">${escapeHtml(last?.body || 'No messages yet')}</span>
+                    </button>
+                `;
+            }).join('') || '<p class="rounded-xl border border-dashed border-slate-800 p-4 text-xs leading-relaxed text-slate-500">No client messages yet. Messages clients send from their portal will appear here.</p>';
+
+            const client = state.clients.find(item => item.id === activeClientConversationId);
+            const heading = document.getElementById('admin-chat-heading');
+            const messagesContainer = document.getElementById('admin-chat-messages');
+            const form = document.getElementById('admin-chat-form');
+            if (!client) {
+                heading.innerText = 'Select a client conversation';
+                messagesContainer.innerHTML = '<p class="py-10 text-center text-xs text-slate-500">Client conversations will appear here.</p>';
+                form.classList.add('hidden');
+                renderClientInboxBadge();
+                return;
+            }
+            heading.innerText = client.name;
+            form.classList.remove('hidden');
+            const thread = state.clientMessages
+                .filter(message => message.clientId === client.id)
+                .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            thread.forEach(message => {
+                if (message.sender === 'client') message.readByAdmin = true;
+            });
+            messagesContainer.innerHTML = thread.map(message => {
+                const fromAdmin = message.sender === 'admin';
+                return `
+                    <div class="flex ${fromAdmin ? 'justify-end' : 'justify-start'}">
+                        <article class="max-w-[88%] rounded-2xl ${fromAdmin ? 'rounded-br-sm bg-cyan-500 text-slate-950' : 'rounded-bl-sm border border-slate-700 bg-slate-800 text-white'} px-4 py-3">
+                            <p class="whitespace-pre-wrap break-words text-xs leading-relaxed">${escapeHtml(message.body)}</p>
+                            <p class="mt-2 text-[9px] ${fromAdmin ? 'text-cyan-950/70' : 'text-slate-400'}">${fromAdmin ? 'Super Admin' : escapeHtml(client.name)} · ${escapeHtml(formatClientMessageTime(message.createdAt))}</p>
+                        </article>
+                    </div>
+                `;
+            }).join('');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            renderClientInboxBadge();
+            saveStorage();
+        }
+
+        function sendAdminClientMessage(event) {
+            event.preventDefault();
+            if (state.currentUser?.role !== 'admin' || !activeClientConversationId) return;
+            const input = document.getElementById('admin-chat-input');
+            const body = input.value.trim();
+            if (!body) return;
+            const client = state.clients.find(item => item.id === activeClientConversationId);
+            if (!client) return;
+            state.clientMessages.push({
+                id: `MSG-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                clientId: client.id,
+                sender: 'admin',
+                senderName: state.profile ? `${state.profile.firstName} ${state.profile.lastName}` : 'Super Admin',
+                body,
+                createdAt: new Date().toISOString(),
+                readByAdmin: true,
+                readByClient: false
+            });
+            input.value = '';
+            saveStorage();
+            renderAdminClientInbox();
         }
 
         function renderBookingsTable() {
@@ -3377,6 +3765,10 @@
             document.getElementById('client-id').value = '';
             document.getElementById('modal-client-title').innerText = 'Add Client Profile';
             document.getElementById('client-name').value = '';
+            document.getElementById('client-username').value = '';
+            document.getElementById('client-password').value = '';
+            document.getElementById('client-password').required = true;
+            document.getElementById('client-password-hint').innerText = 'Set a password so this client can sign in to their project portal.';
             document.getElementById('client-retainer').value = '';
             document.getElementById('client-status').value = 'Paid';
             document.getElementById('client-logo-data').value = '';
@@ -3391,6 +3783,12 @@
             document.getElementById('client-id').value = cl.id;
             document.getElementById('modal-client-title').innerText = `Edit Client (${cl.name})`;
             document.getElementById('client-name').value = cl.name;
+            document.getElementById('client-username').value = cl.username || '';
+            document.getElementById('client-password').value = '';
+            document.getElementById('client-password').required = !cl.password;
+            document.getElementById('client-password-hint').innerText = cl.password
+                ? 'Leave password blank to keep the current password; enter a new one to reset it.'
+                : 'Set a password to enable this client’s project portal login.';
             document.getElementById('client-retainer').value = cl.retainer;
             document.getElementById('client-status').value = cl.status;
             document.getElementById('client-logo-data').value = cl.logo || '';
@@ -3415,34 +3813,53 @@
         function handleClientSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('client-id').value;
-            const name = document.getElementById('client-name').value;
+            const name = document.getElementById('client-name').value.trim();
+            const username = document.getElementById('client-username').value.trim();
+            const passwordInput = document.getElementById('client-password').value;
             const retainer = parseFloat(document.getElementById('client-retainer').value) || 0;
             const status = document.getElementById('client-status').value;
             const logo = document.getElementById('client-logo-data').value || `https://placehold.co/100x100/0284c7/ffffff?text=${encodeURIComponent(name.substring(0,3).toUpperCase())}`;
+            const duplicateUsername = username.toLowerCase() === state.adminAuth.username.toLowerCase() ||
+                state.staff.some(staff => (staff.username || '').toLowerCase() === username.toLowerCase()) ||
+                state.clients.some(client => client.id !== id && (client.username || '').toLowerCase() === username.toLowerCase());
+            if (duplicateUsername) {
+                showToast('That username is already used by another account. Choose a unique username.', 'error');
+                return;
+            }
+            const existingClient = state.clients.find(client => client.id === id);
+            const password = passwordInput || existingClient?.password || '';
+            if (!username || !password) {
+                showToast('Set a client portal username and password before saving.', 'error');
+                return;
+            }
 
             if (id) {
                 const idx = state.clients.findIndex(c => c.id === id);
                 if (idx !== -1) {
-                    state.clients[idx] = { ...state.clients[idx], name, retainer, status, logo };
+                    state.clients[idx] = { ...state.clients[idx], name, username, password, retainer, status, logo };
                     showToast(`Client updated & saved!`, 'success');
                 }
             } else {
-                state.clients.unshift({ id: 'CL-' + Math.floor(100 + Math.random() * 900), name, retainer, status, campaigns: 1, logo });
-                showToast(`Client saved successfully!`, 'success');
+                const clientId = `CL-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+                state.clients.unshift({ id: clientId, name, username, password, retainer, status, campaigns: 1, logo });
+                showToast(`Client portal created for ${name}. Share the username and password securely.`, 'success');
             }
 
             saveStorage();
             closeClientModal();
             renderClientsGrid();
             populateReceiptSelect();
+            renderClientInboxBadge();
         }
 
         function deleteClient(id) {
             if (!confirm('Delete this client?')) return;
             state.clients = state.clients.filter(c => c.id !== id);
+            state.clientMessages = state.clientMessages.filter(message => message.clientId !== id);
             saveStorage();
             renderClientsGrid();
             populateReceiptSelect();
+            renderAdminClientInbox();
             showToast('Client removed', 'info');
         }
 
@@ -3453,6 +3870,8 @@
             document.getElementById('proj-title').value = '';
             document.getElementById('proj-client').value = '';
             document.getElementById('proj-deadline').value = '';
+            document.getElementById('proj-progress').value = '0';
+            document.getElementById('proj-update').value = '';
             document.getElementById('modal-project').classList.remove('hidden');
         }
         function editProject(id) {
@@ -3465,6 +3884,8 @@
             document.getElementById('proj-category').value = p.category;
             document.getElementById('proj-deadline').value = p.deadline;
             document.getElementById('proj-status').value = p.status;
+            document.getElementById('proj-progress').value = Math.max(0, Math.min(100, Number(p.progress) || 0));
+            document.getElementById('proj-update').value = p.update || '';
             document.getElementById('modal-project').classList.remove('hidden');
         }
         function closeProjectModal() {
@@ -3478,16 +3899,19 @@
             const category = document.getElementById('proj-category').value;
             const deadline = document.getElementById('proj-deadline').value;
             const status = document.getElementById('proj-status').value;
+            const progress = Math.max(0, Math.min(100, Number(document.getElementById('proj-progress').value) || 0));
+            const update = document.getElementById('proj-update').value.trim();
 
             if (id) {
                 const idx = state.projects.findIndex(p => p.id === id);
-                if (idx !== -1) state.projects[idx] = { ...state.projects[idx], title, client, category, deadline, status };
+                if (idx !== -1) state.projects[idx] = { ...state.projects[idx], title, client, category, deadline, status, progress, update };
             } else {
-                state.projects.unshift({ id: 'PRJ-' + Math.floor(100 + Math.random() * 900), title, client, category, deadline, status });
+                state.projects.unshift({ id: `PRJ-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, title, client, category, deadline, status, progress, update });
             }
             saveStorage();
             closeProjectModal();
             renderProjectsGrid();
+            if (state.currentUser?.role === 'client') renderClientPortal();
             showToast('Project saved!', 'success');
         }
         function deleteProject(id) {
