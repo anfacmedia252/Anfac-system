@@ -1922,6 +1922,23 @@
         let cloudProfiles = [];
         let cloudRealtimeChannel = null;
         let cloudRefreshInProgress = false;
+        let cloudSnapshotSaveTimer = null;
+        let cloudSnapshotHydrating = false;
+        let cloudSnapshotReady = false;
+        const cloudSnapshotWriterId = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+        const CLOUD_SHARED_DATA_KEYS = [
+            'companyLogo',
+            'transactions',
+            'campaigns',
+            'clients',
+            'bookings',
+            'equipment',
+            'staff',
+            'staffReports',
+            'profile'
+        ];
+        const CLOUD_PRIVATE_FIELD_PATTERN = /^(?:adminAuth|currentUser|username|password|passcode|pin|secret|token|accessToken|refreshToken|otp|credential|credentials|cloudAuthUser|cloudUserId|cloudProfileId)$/i;
 
         const DEFAULT_COMPANY_LOGO = new URL(
             location.pathname.toLowerCase().endsWith('/www/index.html') ? 'logo.png.jpg' : 'www/logo.png.jpg',
@@ -2101,6 +2118,7 @@
         function saveStorage() {
             try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                scheduleCloudAdminSnapshotSave();
                 return true;
             } catch (err) {
                 console.error('Storage error:', err);
@@ -2181,6 +2199,139 @@
             });
         }
 
+        function sanitizeCloudBusinessData(value) {
+            if (Array.isArray(value)) return value.map(sanitizeCloudBusinessData);
+            if (!value || typeof value !== 'object') return value;
+            return Object.fromEntries(Object.entries(value)
+                .filter(([key]) => !CLOUD_PRIVATE_FIELD_PATTERN.test(key))
+                .map(([key, child]) => [key, sanitizeCloudBusinessData(child)]));
+        }
+
+        function createCloudAdminSnapshot() {
+            return Object.fromEntries(CLOUD_SHARED_DATA_KEYS.map(key => [
+                key,
+                sanitizeCloudBusinessData(state[key] ?? (Array.isArray(DEFAULT_DATA[key]) ? [] : DEFAULT_DATA[key]))
+            ]));
+        }
+
+        function scheduleCloudAdminSnapshotSave() {
+            if (!cloudSnapshotReady || cloudSnapshotHydrating || cloudProfile?.role !== 'admin' ||
+                !cloudAuthUser || !supabaseClient) return;
+            if (cloudSnapshotSaveTimer) window.clearTimeout(cloudSnapshotSaveTimer);
+            cloudSnapshotSaveTimer = window.setTimeout(() => {
+                cloudSnapshotSaveTimer = null;
+                void saveCloudAdminSnapshot();
+            }, 800);
+        }
+
+        async function saveCloudAdminSnapshot() {
+            if (!cloudSnapshotReady || cloudSnapshotHydrating || cloudProfile?.role !== 'admin' ||
+                !cloudAuthUser || !supabaseClient) return;
+            try {
+                const { error } = await supabaseClient.from('admin_dashboard_state').upsert({
+                    id: 'main',
+                    data: createCloudAdminSnapshot(),
+                    updated_at: new Date().toISOString(),
+                    updated_by: cloudAuthUser.id,
+                    writer_id: cloudSnapshotWriterId
+                }, { onConflict: 'id' });
+                if (error) throw error;
+                cloudSnapshotReady = true;
+            } catch (error) {
+                console.error('Could not sync shared admin dashboard data:', error);
+                showToast(`Admin dashboard cloud sync failed: ${error.message || 'network error'}`, 'error');
+            }
+        }
+
+        function mergeCloudAdminSnapshot(snapshot) {
+            const localCredentials = {
+                clients: new Map((state.clients || []).map(item => [item.id, {
+                    username: item.username,
+                    password: item.password
+                }])),
+                staff: new Map((state.staff || []).map(item => [item.id, {
+                    username: item.username,
+                    password: item.password
+                }]))
+            };
+            const sanitized = sanitizeCloudBusinessData(snapshot || {});
+            for (const key of CLOUD_SHARED_DATA_KEYS) {
+                if (!Object.prototype.hasOwnProperty.call(sanitized, key)) continue;
+                const incoming = sanitized[key];
+                if (key === 'clients' || key === 'staff') {
+                    const credentials = localCredentials[key];
+                    state[key] = (Array.isArray(incoming) ? incoming : []).map(item => ({
+                        ...item,
+                        ...Object.fromEntries(Object.entries(credentials.get(item.id) || {})
+                            .filter(([, value]) => value !== undefined))
+                    }));
+                } else {
+                    state[key] = incoming;
+                }
+            }
+            state.clients = Array.isArray(state.clients) ? state.clients : [];
+            state.staff = Array.isArray(state.staff) ? state.staff : [];
+        }
+
+        async function loadCloudAdminSnapshot() {
+            cloudSnapshotHydrating = true;
+            let hasSharedSnapshot = false;
+            try {
+                const { data: row, error } = await supabaseClient
+                    .from('admin_dashboard_state')
+                    .select('data, updated_by')
+                    .eq('id', 'main')
+                    .maybeSingle();
+                if (error) throw error;
+                if (row) {
+                    hasSharedSnapshot = true;
+                    cloudSnapshotReady = true;
+                    mergeCloudAdminSnapshot(row.data);
+                    saveStorage();
+                }
+            } finally {
+                cloudSnapshotHydrating = false;
+            }
+            if (!hasSharedSnapshot) {
+                const useThisDeviceAsSource = confirm(
+                    'There is no shared ANFAC dashboard data in Supabase yet. Use the business data on THIS device to create the shared dashboard? This uploads business records, but never local usernames, passwords, or login credentials. Choose Cancel if this device does not contain your main admin data.'
+                );
+                if (!useThisDeviceAsSource) {
+                    showToast('Cloud dashboard not initialized. Sign in on the device with your existing admin data to publish it.', 'info');
+                    return;
+                }
+                cloudSnapshotReady = true;
+                await saveCloudAdminSnapshot();
+            }
+        }
+
+        async function refreshCloudAdminSnapshot(payload) {
+            if (cloudProfile?.role !== 'admin' || !cloudAuthUser ||
+                payload.new?.writer_id === cloudSnapshotWriterId) return;
+            cloudSnapshotHydrating = true;
+            try {
+                const { data: row, error } = await supabaseClient
+                    .from('admin_dashboard_state')
+                    .select('data, updated_by')
+                    .eq('id', 'main')
+                    .maybeSingle();
+                if (error) throw error;
+                if (row) {
+                    cloudSnapshotReady = true;
+                    mergeCloudAdminSnapshot(row.data);
+                    saveStorage();
+                    renderAllViews();
+                    syncProfileUI();
+                    populateReceiptSelect();
+                }
+            } catch (error) {
+                console.error('Could not refresh shared admin dashboard data:', error);
+                showToast(`Admin dashboard refresh failed: ${error.message || 'network error'}`, 'error');
+            } finally {
+                cloudSnapshotHydrating = false;
+            }
+        }
+
         async function restoreCloudSession() {
             if (!supabaseClient) {
                 checkSessionAuth();
@@ -2229,6 +2380,11 @@
         }
 
         async function activateCloudSession(user) {
+            cloudSnapshotReady = false;
+            if (cloudSnapshotSaveTimer) {
+                window.clearTimeout(cloudSnapshotSaveTimer);
+                cloudSnapshotSaveTimer = null;
+            }
             const { data: profile, error } = await supabaseClient
                 .from('profiles')
                 .select('id, role, client_id, full_name')
@@ -2254,6 +2410,7 @@
                 cloudUserId: user.id
             };
             saveStorage();
+            await loadCloudAdminSnapshot();
             await loadCloudWorkspace();
             checkSessionAuth();
             startCloudRealtime();
@@ -2469,6 +2626,7 @@
             cloudRealtimeChannel = supabaseClient.channel(`anfac-workspace-${cloudAuthUser.id}`)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, refreshCloudWorkspace)
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'client_messages' }, refreshCloudWorkspace)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_dashboard_state', filter: 'id=eq.main' }, refreshCloudAdminSnapshot)
                 .subscribe((status, error) => {
                     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
                         console.error('Supabase Realtime subscription failed:', error || status);
@@ -2707,6 +2865,7 @@
             cloudAuthUser = null;
             cloudProfile = null;
             cloudProfiles = [];
+            cloudSnapshotReady = false;
             state.currentUser = null;
             saveStorage();
             document.getElementById('login-user').value = '';

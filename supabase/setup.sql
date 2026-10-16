@@ -42,6 +42,17 @@ create table if not exists public.client_messages (
     )
 );
 
+create table if not exists public.admin_dashboard_state (
+    id text primary key default 'main' check (id = 'main'),
+    data jsonb not null default '{}'::jsonb,
+    updated_at timestamptz not null default now(),
+    updated_by uuid references auth.users (id) on delete set null,
+    writer_id text not null default ''
+);
+
+alter table public.admin_dashboard_state
+    add column if not exists writer_id text not null default '';
+
 alter table public.client_messages
     add column if not exists read_by_admin boolean not null default false,
     add column if not exists read_by_client boolean not null default false;
@@ -73,6 +84,7 @@ grant execute on function public.is_anfac_admin() to authenticated;
 alter table public.profiles enable row level security;
 alter table public.projects enable row level security;
 alter table public.client_messages enable row level security;
+alter table public.admin_dashboard_state enable row level security;
 
 drop policy if exists "Users read their own profile or admins read all" on public.profiles;
 create policy "Users read their own profile or admins read all"
@@ -124,12 +136,29 @@ create policy "Clients mark admin messages read"
     using (client_user_id = (select auth.uid()) and sender_role = 'admin')
     with check (client_user_id = (select auth.uid()) and sender_role = 'admin');
 
-revoke all on public.profiles, public.projects, public.client_messages from anon, public;
+drop policy if exists "Admins read shared dashboard state" on public.admin_dashboard_state;
+create policy "Admins read shared dashboard state"
+    on public.admin_dashboard_state for select to authenticated
+    using ((select public.is_anfac_admin()));
+
+drop policy if exists "Admins create shared dashboard state" on public.admin_dashboard_state;
+create policy "Admins create shared dashboard state"
+    on public.admin_dashboard_state for insert to authenticated
+    with check ((select public.is_anfac_admin()) and updated_by = (select auth.uid()));
+
+drop policy if exists "Admins update shared dashboard state" on public.admin_dashboard_state;
+create policy "Admins update shared dashboard state"
+    on public.admin_dashboard_state for update to authenticated
+    using ((select public.is_anfac_admin()))
+    with check ((select public.is_anfac_admin()) and updated_by = (select auth.uid()));
+
+revoke all on public.profiles, public.projects, public.client_messages, public.admin_dashboard_state from anon, public;
 grant select, insert, update, delete on public.profiles to authenticated;
 grant select, insert, update, delete on public.projects to authenticated;
 grant select, insert on public.client_messages to authenticated;
 revoke update on public.client_messages from authenticated;
 grant update (read_by_admin, read_by_client) on public.client_messages to authenticated;
+grant select, insert, update on public.admin_dashboard_state to authenticated;
 
 do $$
 begin
@@ -149,6 +178,14 @@ begin
               and tablename = 'client_messages'
         ) then
             execute 'alter publication supabase_realtime add table public.client_messages';
+        end if;
+        if not exists (
+            select 1 from pg_publication_tables
+            where pubname = 'supabase_realtime'
+              and schemaname = 'public'
+              and tablename = 'admin_dashboard_state'
+        ) then
+            execute 'alter publication supabase_realtime add table public.admin_dashboard_state';
         end if;
     end if;
 end;

@@ -55,6 +55,21 @@ sees the management dashboard and all linked clients. Do not share one client's
 Auth account with another client. Legacy local usernames do not sync between
 devices.
 
+Sign in to every administrator device with the same Supabase Auth email and
+password linked to the `admin` profile. After the SQL setup is rerun, the app
+shares the administrator's business dashboard records across devices:
+transactions, campaigns, client business details, bookings, equipment, staff
+records, staff reports, company branding, and administrator display profile.
+Client project progress and chat continue to sync through their own tables.
+Passwords, local usernames, and Auth credentials are deliberately excluded
+from shared dashboard data. Existing local dashboard data seeds the shared
+snapshot the first time an administrator signs in, if no cloud snapshot exists.
+The administrator dashboard snapshot is readable and writable only by
+authenticated users whose linked `public.profiles` row has role `admin`.
+When no snapshot exists, the app asks before uploading the current device's
+business data. Confirm only on the device containing the data you want to
+share; cancel on empty/new devices until that source data has been published.
+
 After creating each Auth user, copy that user's **UID** from the Users screen
 and run the matching statement in the SQL Editor (replace the example values):
 
