@@ -2167,7 +2167,7 @@
             startLiveClock();
             populateCalendar();
             syncProfileUI();
-            renderAllViews();
+            if (!state.currentUser?.cloudAuth) renderAllViews();
             populateReceiptSelect();
             initializeClientServiceSlider();
             restoreCloudSession();
@@ -2250,37 +2250,47 @@
             state.currentUser = {
                 role: profile.role,
                 cloudAuth: true,
-                clientId: profile.role === 'client' ? localClientForCloudProfile(profile, user).id : undefined
+                clientId: profile.role === 'client' ? localClientForCloudProfile(profile, user).id : undefined,
+                cloudUserId: user.id
             };
             saveStorage();
             await loadCloudWorkspace();
             checkSessionAuth();
             startCloudRealtime();
-            renderAllViews();
-            if (profile.role === 'client') renderClientPortal();
+            if (profile.role === 'admin') renderAllViews();
+            else renderClientPortal();
             showToast(`Signed in to cloud workspace as ${profile.role === 'admin' ? 'administrator' : profile.full_name}.`);
         }
 
         function localClientForCloudProfile(profile, user = cloudAuthUser) {
-            const name = String(profile.client_id || profile.full_name || '').trim();
-            let client = state.clients.find(item =>
-                String(item.name || '').trim().toLowerCase() === name.toLowerCase() ||
-                String(item.id || '').trim().toLowerCase() === name.toLowerCase()
+            const name = String(profile.client_id || '').trim();
+            const exactMatches = state.clients.filter(item =>
+                String(item.name || '').trim().toLowerCase() === name.toLowerCase()
             );
+            let client = state.clients.find(item => item.cloudProfileId === profile.id);
+            if (!client && exactMatches.length === 1) client = exactMatches[0];
             if (!client) {
                 client = {
-                    id: name,
-                    name: String(profile.full_name || name),
+                    id: `cloud:${profile.id}`,
+                    name,
                     username: user?.email || '',
                     password: '',
                     status: 'Active',
                     campaigns: 0
                 };
                 state.clients.unshift(client);
-            } else if (user?.email) {
-                client.username = user.email;
             }
+            client.cloudProfileId = profile.id;
+            if (user?.email) client.username = user.email;
             return client;
+        }
+
+        function findCloudClientProfile(clientName) {
+            const normalizedName = String(clientName || '').trim().toLowerCase();
+            return cloudProfiles.find(profile =>
+                profile.role === 'client' &&
+                String(profile.client_id || '').trim().toLowerCase() === normalizedName
+            ) || null;
         }
 
         function cloudProjectFromRow(row) {
@@ -2288,13 +2298,14 @@
             const client = profile ? localClientForCloudProfile(profile) : null;
             return {
                 id: row.id,
-                client: client?.name || profile?.client_id || '',
+                client: profile?.client_id || client?.name || '',
                 title: row.title,
                 category: row.category,
                 deadline: row.deadline || '',
                 status: row.status,
                 progress: row.progress,
                 update: row.progress_note || '',
+                cloudClientUserId: row.client_user_id,
                 cloudUpdatedAt: row.updated_at
             };
         }
@@ -2312,6 +2323,7 @@
                 createdAt: row.created_at,
                 readByAdmin: row.read_by_admin,
                 readByClient: row.read_by_client,
+                cloudClientUserId: row.client_user_id,
                 cloudAuth: true
             };
         }
@@ -2345,10 +2357,7 @@
                         continue;
                     }
                     if (syncedIds.has(project.id)) continue;
-                    const profile = cloudProfiles.find(item => item.role === 'client' &&
-                        [item.client_id, item.full_name].some(name =>
-                            String(name || '').trim().toLowerCase() === String(project.client || '').trim().toLowerCase()
-                        ));
+                    const profile = findCloudClientProfile(project.client);
                     if (profile) {
                         await upsertCloudProject(project, profile);
                         syncedIds.add(project.id);
@@ -2404,10 +2413,7 @@
 
         async function pushCloudProject(project) {
             if (!cloudProfile || cloudProfile.role !== 'admin') return false;
-            const profile = cloudProfiles.find(item => item.role === 'client' &&
-                [item.client_id, item.full_name].some(name =>
-                    String(name || '').trim().toLowerCase() === String(project.client || '').trim().toLowerCase()
-                ));
+            const profile = findCloudClientProfile(project.client);
             if (!profile) {
                 showToast(`Cloud sync not completed: no Supabase client profile matches "${project.client}".`, 'error');
                 return false;
@@ -2429,11 +2435,10 @@
 
         async function pushCloudMessage(message, client) {
             if (!cloudAuthUser || !cloudProfile) return false;
-            const clientProfile = cloudProfile.role === 'client' ? cloudProfile :
-                cloudProfiles.find(item => item.role === 'client' &&
-                    [item.client_id, item.full_name].some(name =>
-                        String(name || '').trim().toLowerCase() === String(client.name || '').trim().toLowerCase()
-                    ));
+            const clientProfile = cloudProfile.role === 'client'
+                ? cloudProfile
+                : cloudProfiles.find(item => item.id === client.cloudProfileId) ||
+                    findCloudClientProfile(client.name);
             if (!clientProfile) {
                 showToast(`Cloud chat not available: no linked Supabase account for ${client.name}.`, 'error');
                 return false;
@@ -2477,8 +2482,8 @@
             cloudRefreshInProgress = true;
             try {
                 await loadCloudWorkspace();
-                renderAllViews();
-                if (state.currentUser?.role === 'client') renderClientPortal();
+                if (state.currentUser?.role === 'admin') renderAllViews();
+                else if (state.currentUser?.role === 'client') renderClientPortal();
             } catch (error) {
                 console.error('Could not refresh cloud workspace:', error);
                 showToast(`Cloud refresh failed: ${error.message || 'network error'}`, 'error');
@@ -2609,6 +2614,42 @@
             const passInp = passwordInput.trim();
             const errBox = document.getElementById('login-error-msg');
 
+            if (userInp.includes('@')) {
+                if (!supabaseClient) initializeSupabaseClient();
+                if (!supabaseClient) {
+                    errBox.innerText = 'Cloud sign-in is unavailable because the Supabase library did not load. Check your internet connection and retry.';
+                    errBox.classList.remove('hidden');
+                    return;
+                }
+                let data;
+                let error;
+                try {
+                    ({ data, error } = await supabaseClient.auth.signInWithPassword({
+                        email: userInp,
+                        password: passwordInput
+                    }));
+                } catch (loginError) {
+                    console.error('Supabase sign in failed:', loginError);
+                    errBox.innerText = 'Cloud sign-in failed because the service could not be reached. Check your internet connection and retry.';
+                    errBox.classList.remove('hidden');
+                    return;
+                }
+                if (error) {
+                    errBox.innerText = error.message;
+                    errBox.classList.remove('hidden');
+                    return;
+                }
+                try {
+                    await activateCloudSession(data.user);
+                    errBox.classList.add('hidden');
+                } catch (profileError) {
+                    console.error('Supabase account is not linked:', profileError);
+                    errBox.innerText = profileError.message;
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
             if (userInp.toLowerCase() === state.adminAuth.username.toLowerCase() && passInp === state.adminAuth.password) {
                 state.currentUser = { role: 'admin', username: state.adminAuth.username };
                 errBox.classList.add('hidden');
@@ -2643,42 +2684,6 @@
                 saveStorage();
                 checkSessionAuth();
                 showToast(`Welcome to your project workspace, ${matchedClient.name}`);
-                return;
-            }
-
-            if (userInp.includes('@')) {
-                if (!supabaseClient) initializeSupabaseClient();
-                if (!supabaseClient) {
-                    errBox.innerText = 'Cloud sign-in is unavailable because the Supabase library did not load. Check your internet connection and retry.';
-                    errBox.classList.remove('hidden');
-                    return;
-                }
-                let data;
-                let error;
-                try {
-                    ({ data, error } = await supabaseClient.auth.signInWithPassword({
-                        email: userInp,
-                        password: passwordInput
-                    }));
-                } catch (loginError) {
-                    console.error('Supabase sign in failed:', loginError);
-                    errBox.innerText = 'Cloud sign-in failed because the service could not be reached. Check your internet connection and retry.';
-                    errBox.classList.remove('hidden');
-                    return;
-                }
-                if (error) {
-                    errBox.innerText = error.message;
-                    errBox.classList.remove('hidden');
-                    return;
-                }
-                try {
-                    await activateCloudSession(data.user);
-                    errBox.classList.add('hidden');
-                } catch (profileError) {
-                    console.error('Supabase account is not linked:', profileError);
-                    errBox.innerText = profileError.message;
-                    errBox.classList.remove('hidden');
-                }
                 return;
             }
 
@@ -3304,8 +3309,9 @@
             document.getElementById('client-portal-name').innerText = `Welcome, ${client.name}`;
             document.getElementById('client-portal-account').innerText = client.username || cloudAuthUser?.email || 'Cloud account';
 
-            const projects = state.projects.filter(project =>
-                String(project.client || '').trim().toLowerCase() === client.name.trim().toLowerCase()
+            const projects = state.projects.filter(project => state.currentUser?.cloudAuth
+                ? project.cloudClientUserId === cloudAuthUser?.id
+                : String(project.client || '').trim().toLowerCase() === client.name.trim().toLowerCase()
             );
             document.getElementById('client-project-count').innerText = projects.length.toLocaleString();
             document.getElementById('client-project-grid').innerHTML = projects.map(project => {
@@ -3339,7 +3345,10 @@
             `;
 
             const messages = state.clientMessages
-                .filter(message => message.clientId === client.id)
+                .filter(message => state.currentUser?.cloudAuth
+                    ? message.cloudAuth && message.cloudClientUserId === cloudAuthUser?.id
+                    : message.clientId === client.id
+                )
                 .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
             void markCloudMessagesRead(messages, 'client');
             messages.forEach(message => {
@@ -4502,10 +4511,7 @@
             let cloudDeleted = false;
             if (state.currentUser?.cloudAuth && project) {
                 try {
-                    const profile = cloudProfiles.find(item => item.role === 'client' &&
-                        [item.client_id, item.full_name].some(name =>
-                            String(name || '').trim().toLowerCase() === String(project.client || '').trim().toLowerCase()
-                        ));
+                    const profile = findCloudClientProfile(project.client);
                     if (!profile) throw new Error(`No Supabase client profile matches "${project.client}".`);
                     const { error } = await supabaseClient.from('projects').delete().eq('id', id);
                     if (error) throw error;

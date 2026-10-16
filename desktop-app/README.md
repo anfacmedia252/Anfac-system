@@ -48,6 +48,13 @@ Clients sign in with their Supabase Auth email/password.
 New messages sent by signed-in cloud users sync between devices. Existing
 local-only chat history is not automatically imported into Supabase.
 
+On another phone or computer, open this app and sign in with that person's
+own Supabase Auth email/password. Their linked profile determines the role:
+clients see only their own client portal, projects, and chat; the administrator
+sees the management dashboard and all linked clients. Do not share one client's
+Auth account with another client. Legacy local usernames do not sync between
+devices.
+
 After creating each Auth user, copy that user's **UID** from the Users screen
 and run the matching statement in the SQL Editor (replace the example values):
 
