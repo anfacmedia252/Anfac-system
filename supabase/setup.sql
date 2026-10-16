@@ -33,12 +33,18 @@ create table if not exists public.client_messages (
     sender_role text not null check (sender_role in ('admin', 'client')),
     sender_name text not null,
     body text not null check (char_length(body) between 1 and 2000),
+    read_by_admin boolean not null default false,
+    read_by_client boolean not null default false,
     created_at timestamptz not null default now(),
     constraint client_message_sender_role_check check (
         (sender_role = 'admin' and sender_user_id <> client_user_id)
         or (sender_role = 'client' and sender_user_id = client_user_id)
     )
 );
+
+alter table public.client_messages
+    add column if not exists read_by_admin boolean not null default false,
+    add column if not exists read_by_client boolean not null default false;
 
 create index if not exists projects_client_updated_idx
     on public.projects (client_user_id, updated_at desc);
@@ -106,10 +112,24 @@ create policy "Authenticated users send authorized messages"
         )
     );
 
+drop policy if exists "Admins mark client messages read" on public.client_messages;
+create policy "Admins mark client messages read"
+    on public.client_messages for update to authenticated
+    using ((select public.is_anfac_admin()) and sender_role = 'client')
+    with check ((select public.is_anfac_admin()) and sender_role = 'client');
+
+drop policy if exists "Clients mark admin messages read" on public.client_messages;
+create policy "Clients mark admin messages read"
+    on public.client_messages for update to authenticated
+    using (client_user_id = (select auth.uid()) and sender_role = 'admin')
+    with check (client_user_id = (select auth.uid()) and sender_role = 'admin');
+
 revoke all on public.profiles, public.projects, public.client_messages from anon, public;
 grant select, insert, update, delete on public.profiles to authenticated;
 grant select, insert, update, delete on public.projects to authenticated;
 grant select, insert on public.client_messages to authenticated;
+revoke update on public.client_messages from authenticated;
+grant update (read_by_admin, read_by_client) on public.client_messages to authenticated;
 
 do $$
 begin

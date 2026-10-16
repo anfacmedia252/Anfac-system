@@ -40,6 +40,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Supabase Auth and Realtime client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #070C18; color: #f1f5f9; }
         .glass-panel {
@@ -101,10 +103,10 @@
             <!-- STANDARD SIGN IN FORM -->
             <form id="login-form-panel" onsubmit="handleLogin(event)" class="space-y-4 text-left text-xs">
                 <div>
-                    <label class="block text-slate-400 mb-1 font-semibold">Username</label>
+                    <label class="block text-slate-400 mb-1 font-semibold">Username or cloud email</label>
                     <div class="relative flex items-center">
                         <i class="fa-solid fa-user-shield absolute left-3.5 text-slate-500"></i>
-                        <input type="text" id="login-user" required placeholder="Enter username..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-white outline-none focus:border-blue-500 transition">
+                        <input type="text" id="login-user" required autocomplete="username" placeholder="Username or Supabase email..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-white outline-none focus:border-blue-500 transition">
                     </div>
                 </div>
                 <div>
@@ -127,7 +129,7 @@
                         <i class="fa-solid fa-right-to-bracket"></i> Sign In to System
                     </button>
                 </div>
-                <p class="text-center text-[10px] leading-relaxed text-slate-500">Clients: sign in with the portal username and password provided by ANFAC Media.</p>
+                <p class="text-center text-[10px] leading-relaxed text-slate-500">Cloud sync: use the Supabase Auth email and password set up for your account. Legacy local accounts still work on this device only.</p>
             </form>
 
             <!-- ADMIN PASSWORD RESET: STEP 1 (REQUEST REAL EMAIL OTP) -->
@@ -1908,10 +1910,18 @@
 
     <script>
         const STORAGE_KEY = 'ANFAC_MEDIA_STATE_V9';
+        const SUPABASE_URL = 'https://elxhabkluprluthnctdn.supabase.co';
+        const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_Fo8e_mBdPAKn2XFqnWUu5g_5fFSTNAL';
         let activeClientServiceSlide = 0;
         let clientServiceSlideTimer = null;
         let clientServiceSlidePaused = false;
         let clientServiceTouchStartX = null;
+        let supabaseClient = null;
+        let cloudAuthUser = null;
+        let cloudProfile = null;
+        let cloudProfiles = [];
+        let cloudRealtimeChannel = null;
+        let cloudRefreshInProgress = false;
 
         const DEFAULT_COMPANY_LOGO = new URL(
             location.pathname.toLowerCase().endsWith('/www/index.html') ? 'logo.png.jpg' : 'www/logo.png.jpg',
@@ -2152,18 +2162,336 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             loadStorage();
+            initializeSupabaseClient();
             initCharts();
             startLiveClock();
             populateCalendar();
             syncProfileUI();
             renderAllViews();
             populateReceiptSelect();
-            checkSessionAuth();
             initializeClientServiceSlider();
+            restoreCloudSession();
         });
 
         // ================= AUTHENTICATION & REAL EXTERNAL EMAIL OTP PASSWORD RESET =================
+        function initializeSupabaseClient() {
+            if (!window.supabase?.createClient) return;
+            supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+                auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+            });
+        }
+
+        async function restoreCloudSession() {
+            if (!supabaseClient) {
+                checkSessionAuth();
+                return;
+            }
+            let data;
+            let error;
+            try {
+                ({ data, error } = await supabaseClient.auth.getSession());
+            } catch (sessionError) {
+                console.error('Could not restore Supabase session:', sessionError);
+                showToast('Could not restore cloud session. Please sign in again.', 'error');
+                if (state.currentUser?.cloudAuth) state.currentUser = null;
+                saveStorage();
+                checkSessionAuth();
+                return;
+            }
+            if (error) {
+                console.error('Could not restore Supabase session:', error);
+                showToast('Could not restore cloud session. Please sign in again.', 'error');
+                if (state.currentUser?.cloudAuth) state.currentUser = null;
+                saveStorage();
+                checkSessionAuth();
+                return;
+            }
+            if (data.session) {
+                try {
+                    await activateCloudSession(data.session.user);
+                } catch (restoreError) {
+                    console.error('Could not load cloud workspace:', restoreError);
+                    showToast(restoreError.message || 'Could not load cloud workspace.', 'error');
+                    state.currentUser = null;
+                    cloudAuthUser = null;
+                    cloudProfile = null;
+                    cloudProfiles = [];
+                    saveStorage();
+                    checkSessionAuth();
+                }
+            } else if (state.currentUser?.cloudAuth) {
+                state.currentUser = null;
+                saveStorage();
+                checkSessionAuth();
+            } else {
+                checkSessionAuth();
+            }
+        }
+
+        async function activateCloudSession(user) {
+            const { data: profile, error } = await supabaseClient
+                .from('profiles')
+                .select('id, role, client_id, full_name')
+                .eq('id', user.id)
+                .maybeSingle();
+            if (error) throw error;
+            if (!profile || !['admin', 'client'].includes(profile.role)) {
+                await supabaseClient.auth.signOut();
+                throw new Error('This Supabase account has no authorized ANFAC profile. Ask the administrator to link its Auth user.');
+            }
+            if (profile.role === 'client' && !profile.client_id) {
+                await supabaseClient.auth.signOut();
+                throw new Error('This client account is missing its linked client profile.');
+            }
+
+            cloudAuthUser = user;
+            cloudProfile = profile;
+            cloudProfiles = profile.role === 'admin' ? [profile] : [];
+            state.currentUser = {
+                role: profile.role,
+                cloudAuth: true,
+                clientId: profile.role === 'client' ? localClientForCloudProfile(profile, user).id : undefined
+            };
+            saveStorage();
+            await loadCloudWorkspace();
+            checkSessionAuth();
+            startCloudRealtime();
+            renderAllViews();
+            if (profile.role === 'client') renderClientPortal();
+            showToast(`Signed in to cloud workspace as ${profile.role === 'admin' ? 'administrator' : profile.full_name}.`);
+        }
+
+        function localClientForCloudProfile(profile, user = cloudAuthUser) {
+            const name = String(profile.client_id || profile.full_name || '').trim();
+            let client = state.clients.find(item =>
+                String(item.name || '').trim().toLowerCase() === name.toLowerCase() ||
+                String(item.id || '').trim().toLowerCase() === name.toLowerCase()
+            );
+            if (!client) {
+                client = {
+                    id: name,
+                    name: String(profile.full_name || name),
+                    username: user?.email || '',
+                    password: '',
+                    status: 'Active',
+                    campaigns: 0
+                };
+                state.clients.unshift(client);
+            } else if (user?.email) {
+                client.username = user.email;
+            }
+            return client;
+        }
+
+        function cloudProjectFromRow(row) {
+            const profile = cloudProfiles.find(item => item.id === row.client_user_id) || cloudProfile;
+            const client = profile ? localClientForCloudProfile(profile) : null;
+            return {
+                id: row.id,
+                client: client?.name || profile?.client_id || '',
+                title: row.title,
+                category: row.category,
+                deadline: row.deadline || '',
+                status: row.status,
+                progress: row.progress,
+                update: row.progress_note || '',
+                cloudUpdatedAt: row.updated_at
+            };
+        }
+
+        function cloudMessageFromRow(row) {
+            const profile = cloudProfiles.find(item => item.id === row.client_user_id) ||
+                (cloudProfile?.role === 'client' ? cloudProfile : null);
+            const client = profile ? localClientForCloudProfile(profile) : null;
+            return {
+                id: row.id,
+                clientId: client?.id || profile?.client_id || '',
+                sender: row.sender_role,
+                senderName: row.sender_name,
+                body: row.body,
+                createdAt: row.created_at,
+                readByAdmin: row.read_by_admin,
+                readByClient: row.read_by_client,
+                cloudAuth: true
+            };
+        }
+
+        async function loadCloudWorkspace() {
+            if (!supabaseClient || !cloudAuthUser || !cloudProfile) return;
+            if (cloudProfile.role === 'admin') {
+                const { data: profiles, error: profilesError } = await supabaseClient
+                    .from('profiles').select('id, role, client_id, full_name');
+                if (profilesError) throw profilesError;
+                cloudProfiles = profiles || [];
+                cloudProfiles.filter(item => item.role === 'client')
+                    .forEach(item => localClientForCloudProfile(item));
+            } else {
+                cloudProfiles = [cloudProfile];
+                localClientForCloudProfile(cloudProfile, cloudAuthUser);
+            }
+
+            const { data: remoteProjects, error: projectsError } = await supabaseClient
+                .from('projects').select('*');
+            if (projectsError) throw projectsError;
+
+            if (cloudProfile.role === 'admin') {
+                const remoteIds = new Set((remoteProjects || []).map(project => project.id));
+                const syncedIds = new Set(Array.isArray(state.cloudSyncedProjectIds)
+                    ? state.cloudSyncedProjectIds
+                    : []);
+                for (const project of state.projects) {
+                    if (remoteIds.has(project.id)) {
+                        syncedIds.add(project.id);
+                        continue;
+                    }
+                    if (syncedIds.has(project.id)) continue;
+                    const profile = cloudProfiles.find(item => item.role === 'client' &&
+                        [item.client_id, item.full_name].some(name =>
+                            String(name || '').trim().toLowerCase() === String(project.client || '').trim().toLowerCase()
+                        ));
+                    if (profile) {
+                        await upsertCloudProject(project, profile);
+                        syncedIds.add(project.id);
+                    }
+                }
+                state.cloudSyncedProjectIds = [...syncedIds];
+                const { data: refreshedProjects, error: refreshedProjectsError } = await supabaseClient
+                    .from('projects').select('*');
+                if (refreshedProjectsError) throw refreshedProjectsError;
+                const clientNames = new Set(cloudProfiles.filter(item => item.role === 'client')
+                    .flatMap(item => [item.client_id, item.full_name])
+                    .map(name => String(name || '').trim().toLowerCase()));
+                state.projects = state.projects.filter(project =>
+                    !clientNames.has(String(project.client || '').trim().toLowerCase())
+                ).concat((refreshedProjects || []).map(cloudProjectFromRow));
+            } else {
+                const clientNames = new Set([cloudProfile.client_id, cloudProfile.full_name]
+                    .map(name => String(name || '').trim().toLowerCase()));
+                state.projects = state.projects.filter(project =>
+                    !clientNames.has(String(project.client || '').trim().toLowerCase())
+                ).concat((remoteProjects || []).map(cloudProjectFromRow));
+            }
+
+            const { data: remoteMessages, error: messagesError } = await supabaseClient
+                .from('client_messages').select('*').order('created_at', { ascending: true });
+            if (messagesError) throw messagesError;
+            const linkedClientIds = new Set(cloudProfiles.filter(item => item.role === 'client')
+                .map(item => localClientForCloudProfile(item).id));
+            state.clientMessages = state.clientMessages.filter(message =>
+                !linkedClientIds.has(message.clientId) || message.cloudAuth
+            );
+            state.clientMessages = state.clientMessages
+                .filter(message => !message.cloudAuth)
+                .concat((remoteMessages || []).map(cloudMessageFromRow));
+            saveStorage();
+            renderClientInboxBadge();
+        }
+
+        async function upsertCloudProject(project, profile) {
+            const { error } = await supabaseClient.from('projects').upsert({
+                id: project.id,
+                client_user_id: profile.id,
+                title: project.title,
+                category: project.category || 'Project',
+                deadline: project.deadline || null,
+                status: project.status || 'Planning',
+                progress: Math.max(0, Math.min(100, Number(project.progress) || 0)),
+                progress_note: project.update || '',
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'id' });
+            if (error) throw error;
+        }
+
+        async function pushCloudProject(project) {
+            if (!cloudProfile || cloudProfile.role !== 'admin') return false;
+            const profile = cloudProfiles.find(item => item.role === 'client' &&
+                [item.client_id, item.full_name].some(name =>
+                    String(name || '').trim().toLowerCase() === String(project.client || '').trim().toLowerCase()
+                ));
+            if (!profile) {
+                showToast(`Cloud sync not completed: no Supabase client profile matches "${project.client}".`, 'error');
+                return false;
+            }
+            try {
+                await upsertCloudProject(project, profile);
+                state.cloudSyncedProjectIds = [...new Set([
+                    ...(state.cloudSyncedProjectIds || []),
+                    project.id
+                ])];
+                saveStorage();
+                return true;
+            } catch (error) {
+                console.error('Could not sync project to Supabase:', error);
+                showToast(`Cloud project sync failed: ${error.message || 'network or permissions error'}`, 'error');
+                return false;
+            }
+        }
+
+        async function pushCloudMessage(message, client) {
+            if (!cloudAuthUser || !cloudProfile) return false;
+            const clientProfile = cloudProfile.role === 'client' ? cloudProfile :
+                cloudProfiles.find(item => item.role === 'client' &&
+                    [item.client_id, item.full_name].some(name =>
+                        String(name || '').trim().toLowerCase() === String(client.name || '').trim().toLowerCase()
+                    ));
+            if (!clientProfile) {
+                showToast(`Cloud chat not available: no linked Supabase account for ${client.name}.`, 'error');
+                return false;
+            }
+            const { error } = await supabaseClient.from('client_messages').insert({
+                id: message.id,
+                client_user_id: clientProfile.id,
+                sender_user_id: cloudAuthUser.id,
+                sender_role: cloudProfile.role,
+                sender_name: message.senderName,
+                body: message.body,
+                read_by_admin: message.readByAdmin,
+                read_by_client: message.readByClient
+            });
+            if (error) {
+                console.error('Could not sync client message to Supabase:', error);
+                showToast(`Cloud chat sync failed: ${error.message}`, 'error');
+                return false;
+            }
+            message.cloudAuth = true;
+            saveStorage();
+            return true;
+        }
+
+        function startCloudRealtime() {
+            if (!supabaseClient || !cloudAuthUser) return;
+            if (cloudRealtimeChannel) supabaseClient.removeChannel(cloudRealtimeChannel);
+            cloudRealtimeChannel = supabaseClient.channel(`anfac-workspace-${cloudAuthUser.id}`)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, refreshCloudWorkspace)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'client_messages' }, refreshCloudWorkspace)
+                .subscribe((status, error) => {
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        console.error('Supabase Realtime subscription failed:', error || status);
+                        showToast('Cloud live updates are unavailable. Check the Supabase Realtime setup.', 'error');
+                    }
+                });
+        }
+
+        async function refreshCloudWorkspace() {
+            if (cloudRefreshInProgress || !cloudAuthUser) return;
+            cloudRefreshInProgress = true;
+            try {
+                await loadCloudWorkspace();
+                renderAllViews();
+                if (state.currentUser?.role === 'client') renderClientPortal();
+            } catch (error) {
+                console.error('Could not refresh cloud workspace:', error);
+                showToast(`Cloud refresh failed: ${error.message || 'network error'}`, 'error');
+            } finally {
+                cloudRefreshInProgress = false;
+            }
+        }
+
         function checkSessionAuth() {
+            if (state.currentUser?.cloudAuth && !cloudAuthUser) {
+                document.getElementById('auth-overlay').classList.remove('hidden');
+                return;
+            }
             if (state.currentUser) {
                 document.getElementById('auth-overlay').classList.add('hidden');
                 applyRolePermissions();
@@ -2274,10 +2602,11 @@
             showToast("Admin password reset & saved! Sign in with your new password.");
         }
 
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
             const userInp = document.getElementById('login-user').value.trim();
-            const passInp = document.getElementById('login-pass').value.trim();
+            const passwordInput = document.getElementById('login-pass').value;
+            const passInp = passwordInput.trim();
             const errBox = document.getElementById('login-error-msg');
 
             if (userInp.toLowerCase() === state.adminAuth.username.toLowerCase() && passInp === state.adminAuth.password) {
@@ -2317,10 +2646,62 @@
                 return;
             }
 
+            if (userInp.includes('@')) {
+                if (!supabaseClient) initializeSupabaseClient();
+                if (!supabaseClient) {
+                    errBox.innerText = 'Cloud sign-in is unavailable because the Supabase library did not load. Check your internet connection and retry.';
+                    errBox.classList.remove('hidden');
+                    return;
+                }
+                let data;
+                let error;
+                try {
+                    ({ data, error } = await supabaseClient.auth.signInWithPassword({
+                        email: userInp,
+                        password: passwordInput
+                    }));
+                } catch (loginError) {
+                    console.error('Supabase sign in failed:', loginError);
+                    errBox.innerText = 'Cloud sign-in failed because the service could not be reached. Check your internet connection and retry.';
+                    errBox.classList.remove('hidden');
+                    return;
+                }
+                if (error) {
+                    errBox.innerText = error.message;
+                    errBox.classList.remove('hidden');
+                    return;
+                }
+                try {
+                    await activateCloudSession(data.user);
+                    errBox.classList.add('hidden');
+                } catch (profileError) {
+                    console.error('Supabase account is not linked:', profileError);
+                    errBox.innerText = profileError.message;
+                    errBox.classList.remove('hidden');
+                }
+                return;
+            }
+
+            errBox.innerText = 'Username or password is incorrect. Use your Supabase Auth email for cloud sync.';
             errBox.classList.remove('hidden');
         }
 
-        function handleLogout() {
+        async function handleLogout() {
+            if (cloudAuthUser && supabaseClient) {
+                const { error } = await supabaseClient.auth.signOut();
+                if (error) {
+                    console.error('Supabase sign out failed:', error);
+                    showToast(`Cloud sign out failed: ${error.message}`, 'error');
+                    return;
+                }
+            }
+            if (cloudRealtimeChannel && supabaseClient) {
+                await supabaseClient.removeChannel(cloudRealtimeChannel);
+            }
+            cloudRealtimeChannel = null;
+            cloudAuthUser = null;
+            cloudProfile = null;
+            cloudProfiles = [];
             state.currentUser = null;
             saveStorage();
             document.getElementById('login-user').value = '';
@@ -2358,7 +2739,10 @@
                 renderDirectorDashboard();
                 switchView('director-dashboard');
             } else if (state.currentUser.role === 'client') {
-                const client = state.clients.find(item => item.id === state.currentUser.clientId && item.username && item.password);
+                const client = state.clients.find(item =>
+                    item.id === state.currentUser.clientId &&
+                    (state.currentUser.cloudAuth || (item.username && item.password))
+                );
                 if (!client) {
                     state.currentUser = null;
                     saveStorage();
@@ -2827,6 +3211,33 @@
             return Number.isNaN(date.getTime()) ? '' : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
         }
 
+        async function markCloudMessagesRead(messages, readerRole) {
+            if (!supabaseClient || !cloudProfile) return;
+            const unread = messages.filter(message =>
+                message.cloudAuth &&
+                (readerRole === 'client'
+                    ? message.sender === 'admin' && !message.readByClient
+                    : message.sender === 'client' && !message.readByAdmin)
+            );
+            if (!unread.length) return;
+            const ids = unread.map(message => message.id);
+            const column = readerRole === 'client' ? 'read_by_client' : 'read_by_admin';
+            try {
+                const { error } = await supabaseClient.from('client_messages')
+                    .update({ [column]: true }).in('id', ids);
+                if (error) throw error;
+            } catch (error) {
+                console.error('Could not update cloud message read status:', error);
+                showToast(`Could not sync message read status: ${error.message || 'network error'}`, 'error');
+                return;
+            }
+            unread.forEach(message => {
+                if (readerRole === 'client') message.readByClient = true;
+                else message.readByAdmin = true;
+            });
+            saveStorage();
+        }
+
         function initializeClientServiceSlider() {
             const slides = [...document.querySelectorAll('[data-service-slide]')];
             const dots = document.getElementById('client-service-slide-dots');
@@ -2891,7 +3302,7 @@
             document.getElementById('nav-avatar-img').src = client.logo || DEFAULT_COMPANY_LOGO;
             document.getElementById('client-portal-logo').src = client.logo || DEFAULT_COMPANY_LOGO;
             document.getElementById('client-portal-name').innerText = `Welcome, ${client.name}`;
-            document.getElementById('client-portal-account').innerText = client.username;
+            document.getElementById('client-portal-account').innerText = client.username || cloudAuthUser?.email || 'Cloud account';
 
             const projects = state.projects.filter(project =>
                 String(project.client || '').trim().toLowerCase() === client.name.trim().toLowerCase()
@@ -2930,6 +3341,7 @@
             const messages = state.clientMessages
                 .filter(message => message.clientId === client.id)
                 .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            void markCloudMessagesRead(messages, 'client');
             messages.forEach(message => {
                 if (message.sender === 'admin') message.readByClient = true;
             });
@@ -2950,7 +3362,7 @@
             renderClientInboxBadge();
         }
 
-        function sendClientMessage(event) {
+        async function sendClientMessage(event) {
             event.preventDefault();
             const client = getClientForSession();
             const input = document.getElementById('client-chat-input');
@@ -2968,8 +3380,13 @@
             });
             input.value = '';
             saveStorage();
+            if (state.currentUser.cloudAuth && !(await pushCloudMessage(state.clientMessages[state.clientMessages.length - 1], client))) {
+                renderClientPortal();
+                return;
+            }
             renderClientPortal();
-            showToast('Message sent to Super Admin.');
+            if (!state.currentUser.cloudAuth) showToast('Message saved on this device only. Sign in with a cloud account to sync.');
+            else showToast('Message sent to Super Admin.');
         }
 
         function renderClientInboxBadge() {
@@ -3026,6 +3443,7 @@
             const thread = state.clientMessages
                 .filter(message => message.clientId === client.id)
                 .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+            void markCloudMessagesRead(thread, 'admin');
             thread.forEach(message => {
                 if (message.sender === 'client') message.readByAdmin = true;
             });
@@ -3045,7 +3463,7 @@
             saveStorage();
         }
 
-        function sendAdminClientMessage(event) {
+        async function sendAdminClientMessage(event) {
             event.preventDefault();
             if (state.currentUser?.role !== 'admin' || !activeClientConversationId) return;
             const input = document.getElementById('admin-chat-input');
@@ -3065,7 +3483,12 @@
             });
             input.value = '';
             saveStorage();
+            if (state.currentUser.cloudAuth && !(await pushCloudMessage(state.clientMessages[state.clientMessages.length - 1], client))) {
+                renderAdminClientInbox();
+                return;
+            }
             renderAdminClientInbox();
+            if (!state.currentUser.cloudAuth) showToast('Message saved on this device only. Sign in with a cloud account to sync.');
         }
 
         function renderBookingsTable() {
@@ -4038,7 +4461,7 @@
             document.getElementById('proj-progress').value = progress;
             document.getElementById('proj-progress-slider').value = progress;
         }
-        function handleProjectSubmit(e) {
+        async function handleProjectSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('proj-id').value;
             const title = document.getElementById('proj-title').value;
@@ -4055,18 +4478,47 @@
             } else {
                 state.projects.unshift({ id: `PRJ-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, title, client, category, deadline, status, progress, update });
             }
+            const savedProject = id
+                ? state.projects.find(project => project.id === id)
+                : state.projects[0];
+            if (!savedProject) {
+                showToast('Could not find the saved project. Please retry.', 'error');
+                return;
+            }
             saveStorage();
             closeProjectModal();
+            const cloudSynced = state.currentUser?.cloudAuth ? await pushCloudProject(savedProject) : null;
             renderProjectsGrid();
             if (state.currentUser?.role === 'client') renderClientPortal();
-            showToast('Project saved!', 'success');
+            if (!state.currentUser?.cloudAuth) showToast('Project saved on this device only. Sign in with a cloud administrator account to sync.', 'info');
+            else if (cloudSynced) showToast('Project saved and synced to client devices.', 'success');
+            else showToast('Project saved locally, but cloud sync needs attention.', 'error');
         }
-        function deleteProject(id) {
+        async function deleteProject(id) {
             if (!confirm('Delete this project?')) return;
+            const project = state.projects.find(item => item.id === id);
             state.projects = state.projects.filter(p => p.id !== id);
             saveStorage();
+            let cloudDeleted = false;
+            if (state.currentUser?.cloudAuth && project) {
+                try {
+                    const profile = cloudProfiles.find(item => item.role === 'client' &&
+                        [item.client_id, item.full_name].some(name =>
+                            String(name || '').trim().toLowerCase() === String(project.client || '').trim().toLowerCase()
+                        ));
+                    if (!profile) throw new Error(`No Supabase client profile matches "${project.client}".`);
+                    const { error } = await supabaseClient.from('projects').delete().eq('id', id);
+                    if (error) throw error;
+                    cloudDeleted = true;
+                } catch (error) {
+                    console.error('Could not delete cloud project:', error);
+                    showToast(`Project removed locally, but cloud deletion failed: ${error.message}`, 'error');
+                }
+            }
             renderProjectsGrid();
-            showToast('Project deleted', 'info');
+            if (!state.currentUser?.cloudAuth) showToast('Project deleted on this device only.', 'info');
+            else if (cloudDeleted) showToast('Project deleted from cloud.', 'success');
+            else showToast('Project removed locally, but cloud deletion needs attention.', 'error');
         }
 
         // Bookings (Full CRUD)
