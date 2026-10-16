@@ -56,6 +56,14 @@
         ::-webkit-scrollbar-track { background: #070c18; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #0284c7; }
+        @keyframes client-poster-enter {
+            from { opacity: 0; transform: translateY(10px) scale(0.985); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .client-service-slide:not(.hidden) { animation: client-poster-enter 420ms ease-out both; }
+        @media (prefers-reduced-motion: reduce) {
+            .client-service-slide:not(.hidden) { animation: none; }
+        }
 
         /* Dedicated Print Engine for A5 Receipts/Invoices & A4 Staff Reports */
         #print-mount { display: none; }
@@ -623,6 +631,61 @@
                     </div>
                 </div>
             </section>
+            <section class="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/70 p-4 sm:p-5" aria-label="ANFAC Media services">
+                <div class="mb-4 flex items-end justify-between gap-3">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-300">Made for your brand</span>
+                        <h2 class="mt-1 text-lg font-extrabold text-white">ANFAC Media services</h2>
+                    </div>
+                    <span id="client-service-slide-count" class="text-[10px] font-semibold text-slate-500" aria-live="polite">01 / 03</span>
+                </div>
+                <div id="client-service-slider" class="relative" onmouseenter="pauseClientServiceSlider()" onmouseleave="resumeClientServiceSlider()" onfocusin="pauseClientServiceSlider()" onfocusout="resumeClientServiceSlider()">
+                    <div class="client-service-slide relative hidden min-h-56 overflow-hidden rounded-2xl border border-sky-300/20 bg-gradient-to-br from-slate-950 via-blue-950 to-sky-800 p-6 sm:p-8" data-service-slide aria-hidden="true">
+                        <div class="absolute -right-8 -top-12 h-56 w-56 rounded-full border-[24px] border-sky-300/10"></div>
+                        <div class="absolute bottom-5 right-8 h-28 w-28 rounded-3xl border border-white/10 bg-white/5 rotate-12"></div>
+                        <div class="relative flex min-h-40 flex-col justify-between gap-6 sm:flex-row sm:items-end">
+                            <div class="max-w-xl">
+                                <span class="inline-flex items-center gap-2 rounded-full border border-sky-200/20 bg-slate-950/30 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-sky-200"><i class="fa-solid fa-bullhorn"></i> ANFAC MEDIA · ADVERTISING</span>
+                                <h3 class="mt-4 text-3xl font-black uppercase leading-none text-white sm:text-5xl">Get seen.<br><span class="text-sky-200">Get chosen.</span></h3>
+                                <p class="mt-3 max-w-md text-xs leading-relaxed text-sky-100/80">Digital ads and campaign creative built to put your brand in front of the right audience.</p>
+                            </div>
+                            <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-sky-200/20 bg-sky-200/10 text-4xl text-sky-100 shadow-2xl"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                        </div>
+                    </div>
+                    <div class="client-service-slide relative hidden min-h-56 overflow-hidden rounded-2xl border border-fuchsia-300/20 bg-gradient-to-br from-slate-950 via-purple-950 to-fuchsia-800 p-6 sm:p-8" data-service-slide aria-hidden="true">
+                        <div class="absolute -right-8 -top-12 h-56 w-56 rounded-full bg-fuchsia-300/10 blur-2xl"></div>
+                        <div class="absolute bottom-4 right-10 h-32 w-32 rounded-full border border-white/15"></div>
+                        <div class="relative flex min-h-40 flex-col justify-between gap-6 sm:flex-row sm:items-end">
+                            <div class="max-w-xl">
+                                <span class="inline-flex items-center gap-2 rounded-full border border-fuchsia-200/20 bg-slate-950/30 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-fuchsia-100"><i class="fa-solid fa-wand-magic-sparkles"></i> ANFAC MEDIA · BRAND DESIGN</span>
+                                <h3 class="mt-4 text-3xl font-black uppercase leading-none text-white sm:text-5xl">Make your<br><span class="text-fuchsia-200">mark.</span></h3>
+                                <p class="mt-3 max-w-md text-xs leading-relaxed text-fuchsia-100/80">Distinctive brand identity and polished social content that make every impression count.</p>
+                            </div>
+                            <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-fuchsia-200/20 bg-fuchsia-200/10 text-4xl text-fuchsia-100 shadow-2xl"><i class="fa-solid fa-bezier-curve"></i></div>
+                        </div>
+                    </div>
+                    <div class="client-service-slide relative hidden min-h-56 overflow-hidden rounded-2xl border border-amber-300/20 bg-gradient-to-br from-slate-950 via-rose-950 to-orange-700 p-6 sm:p-8" data-service-slide aria-hidden="true">
+                        <div class="absolute -right-10 -top-16 h-60 w-60 rounded-full bg-orange-300/10 blur-2xl"></div>
+                        <div class="absolute bottom-5 right-8 h-24 w-24 rotate-45 border border-orange-100/20 bg-white/5"></div>
+                        <div class="relative flex min-h-40 flex-col justify-between gap-6 sm:flex-row sm:items-end">
+                            <div class="max-w-xl">
+                                <span class="inline-flex items-center gap-2 rounded-full border border-orange-200/20 bg-slate-950/30 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-orange-100"><i class="fa-solid fa-video"></i> ANFAC MEDIA · PHOTO &amp; VIDEO</span>
+                                <h3 class="mt-4 text-3xl font-black uppercase leading-none text-white sm:text-5xl">Stories that<br><span class="text-orange-200">stay with you.</span></h3>
+                                <p class="mt-3 max-w-md text-xs leading-relaxed text-orange-100/80">Professional photography and video production that bring your ideas to life.</p>
+                            </div>
+                            <div class="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border border-orange-200/20 bg-orange-200/10 text-4xl text-orange-100 shadow-2xl"><i class="fa-solid fa-clapperboard"></i></div>
+                        </div>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="flex items-center gap-2" role="group" aria-label="Choose a service poster">
+                            <button type="button" onclick="setClientServiceSlide(activeClientServiceSlide - 1)" aria-label="Previous service poster" class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-slate-300 transition hover:border-sky-400 hover:text-white"><i class="fa-solid fa-chevron-left"></i></button>
+                            <div id="client-service-slide-dots" class="flex items-center gap-1.5"></div>
+                            <button type="button" onclick="setClientServiceSlide(activeClientServiceSlide + 1)" aria-label="Next service poster" class="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-700 bg-slate-950 text-slate-300 transition hover:border-sky-400 hover:text-white"><i class="fa-solid fa-chevron-right"></i></button>
+                        </div>
+                        <span class="text-[9px] font-semibold uppercase tracking-[0.15em] text-slate-500">Swipe or use arrows</span>
+                    </div>
+                </div>
+            </section>
             <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 sm:p-6">
                 <div class="mb-5">
                     <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-sky-300">Work in progress</span>
@@ -644,12 +707,17 @@
                     </form>
                 </div>
                 <aside class="border-t border-slate-800 bg-slate-950/40 p-5 lg:border-l lg:border-t-0">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Your account</h3>
-                    <p class="mt-2 text-xs leading-relaxed text-slate-400">This private workspace shows only projects assigned to your client account. Your messages are shared with the Super Admin on this app installation.</p>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">How to track your work</h3>
+                    <ol class="mt-3 space-y-3 text-[11px] leading-relaxed text-slate-400">
+                        <li class="flex gap-2"><span class="font-black text-sky-300">1.</span><span>Find your project under <strong class="text-slate-200">Your projects</strong>; only projects assigned to your client profile appear here.</span></li>
+                        <li class="flex gap-2"><span class="font-black text-sky-300">2.</span><span>Check its status, progress bar, latest team update, and target date.</span></li>
+                        <li class="flex gap-2"><span class="font-black text-sky-300">3.</span><span>ANFAC staff update progress in <strong class="text-slate-200">Projects &amp; Events → Edit project</strong>. Your tracker reflects the saved update when you use the same app installation.</span></li>
+                    </ol>
                     <div class="mt-5 rounded-xl border border-slate-800 bg-slate-900 p-3">
-                        <span class="text-[10px] uppercase tracking-wider text-slate-500">Account</span>
+                        <span class="text-[10px] uppercase tracking-wider text-slate-500">Signed in as</span>
                         <p id="client-portal-account" class="mt-1 truncate text-xs font-bold text-white"></p>
                     </div>
+                    <p class="mt-3 text-[9px] leading-relaxed text-slate-500">Project updates are stored on this app installation and are not synced across devices yet.</p>
                 </aside>
             </section>
         </div>
@@ -917,7 +985,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-bold text-white">Projects & Events Management</h2>
-                    <p class="text-xs text-slate-400">End-to-end task tracking, event production milestones, and deliverables.</p>
+                    <p class="text-xs text-slate-400">Track work milestones and publish progress updates to the matching client profile.</p>
                 </div>
                 <button onclick="openProjectModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-2">
                     <i class="fa-solid fa-plus"></i> New Project / Event
@@ -933,6 +1001,16 @@
                 </div>
                 <div class="text-xs text-slate-400 font-mono" id="projects-count-display">Showing 0 projects</div>
             </div>
+
+            <section class="rounded-2xl border border-purple-400/20 bg-purple-500/5 p-4 sm:p-5">
+                <div class="flex items-start gap-3">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-400/10 text-purple-300"><i class="fa-solid fa-chart-line"></i></span>
+                    <div>
+                        <h3 class="text-xs font-bold text-white">Where to update a client's progress</h3>
+                        <p class="mt-1 text-[11px] leading-relaxed text-slate-300">Select <strong>New Project / Event</strong> or edit a project. Match the Client Name to the client's profile, set Client-visible progress from 0–100%, update the status and progress note, then save. The client sees these changes in <strong>My Projects &amp; Messages</strong>.</p>
+                    </div>
+                </div>
+            </section>
 
             <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
@@ -1635,8 +1713,12 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-slate-400 mb-1">Client-visible progress (%)</label>
-                    <input type="number" id="proj-progress" min="0" max="100" value="0" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                    <label for="proj-progress" class="block text-slate-400 mb-1">Client-visible progress (%)</label>
+                    <div class="flex items-center gap-3">
+                        <input type="range" id="proj-progress-slider" min="0" max="100" value="0" aria-label="Set client-visible project progress" oninput="syncProjectProgressSlider(this.value)" class="min-w-0 flex-1 accent-purple-500">
+                        <input type="number" id="proj-progress" min="0" max="100" value="0" required oninput="syncProjectProgressSlider(this.value)" class="w-20 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                    </div>
+                    <p class="mt-1 text-[9px] text-slate-500">Set 0–100%; the client sees this percentage on their project tracker.</p>
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">Progress update for client</label>
@@ -1826,6 +1908,10 @@
 
     <script>
         const STORAGE_KEY = 'ANFAC_MEDIA_STATE_V9';
+        let activeClientServiceSlide = 0;
+        let clientServiceSlideTimer = null;
+        let clientServiceSlidePaused = false;
+        let clientServiceTouchStartX = null;
 
         const DEFAULT_COMPANY_LOGO = new URL(
             location.pathname.toLowerCase().endsWith('/www/index.html') ? 'logo.png.jpg' : 'www/logo.png.jpg',
@@ -2073,6 +2159,7 @@
             renderAllViews();
             populateReceiptSelect();
             checkSessionAuth();
+            initializeClientServiceSlider();
         });
 
         // ================= AUTHENTICATION & REAL EXTERNAL EMAIL OTP PASSWORD RESET =================
@@ -2738,6 +2825,61 @@
         function formatClientMessageTime(timestamp) {
             const date = new Date(timestamp);
             return Number.isNaN(date.getTime()) ? '' : date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+        }
+
+        function initializeClientServiceSlider() {
+            const slides = [...document.querySelectorAll('[data-service-slide]')];
+            const dots = document.getElementById('client-service-slide-dots');
+            if (!slides.length || !dots) return;
+            dots.innerHTML = slides.map((_, index) => `
+                <button type="button" onclick="setClientServiceSlide(${index})" aria-label="Show service poster ${index + 1}" class="h-2.5 w-2.5 rounded-full bg-slate-700 transition hover:bg-sky-300" data-service-dot></button>
+            `).join('');
+            setClientServiceSlide(activeClientServiceSlide);
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            clientServiceSlideTimer = window.setInterval(() => {
+                const portal = document.getElementById('view-client-portal');
+                if (clientServiceSlidePaused || document.hidden || portal?.classList.contains('hidden')) return;
+                setClientServiceSlide(activeClientServiceSlide + 1);
+            }, 6000);
+        }
+
+        function setClientServiceSlide(index) {
+            const slides = [...document.querySelectorAll('[data-service-slide]')];
+            if (!slides.length) return;
+            activeClientServiceSlide = (index + slides.length) % slides.length;
+            slides.forEach((slide, slideIndex) => {
+                const isActive = slideIndex === activeClientServiceSlide;
+                slide.classList.toggle('hidden', !isActive);
+                slide.setAttribute('aria-hidden', String(!isActive));
+            });
+            document.querySelectorAll('[data-service-dot]').forEach((dot, dotIndex) => {
+                const isActive = dotIndex === activeClientServiceSlide;
+                dot.classList.toggle('bg-sky-400', isActive);
+                dot.classList.toggle('bg-slate-700', !isActive);
+                dot.setAttribute('aria-current', isActive ? 'true' : 'false');
+            });
+            const counter = document.getElementById('client-service-slide-count');
+            if (counter) counter.innerText = `${String(activeClientServiceSlide + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+        }
+
+        function pauseClientServiceSlider() {
+            clientServiceSlidePaused = true;
+        }
+
+        function resumeClientServiceSlider() {
+            clientServiceSlidePaused = false;
+        }
+
+        function startClientServiceSwipe(event) {
+            clientServiceTouchStartX = event.changedTouches[0]?.clientX ?? null;
+        }
+
+        function endClientServiceSwipe(event) {
+            const endX = event.changedTouches[0]?.clientX;
+            if (clientServiceTouchStartX === null || endX === undefined) return;
+            const distance = endX - clientServiceTouchStartX;
+            if (Math.abs(distance) > 45) setClientServiceSlide(activeClientServiceSlide + (distance < 0 ? 1 : -1));
+            clientServiceTouchStartX = null;
         }
 
         function renderClientPortal() {
@@ -3870,7 +4012,7 @@
             document.getElementById('proj-title').value = '';
             document.getElementById('proj-client').value = '';
             document.getElementById('proj-deadline').value = '';
-            document.getElementById('proj-progress').value = '0';
+            syncProjectProgressSlider(0);
             document.getElementById('proj-update').value = '';
             document.getElementById('modal-project').classList.remove('hidden');
         }
@@ -3884,12 +4026,17 @@
             document.getElementById('proj-category').value = p.category;
             document.getElementById('proj-deadline').value = p.deadline;
             document.getElementById('proj-status').value = p.status;
-            document.getElementById('proj-progress').value = Math.max(0, Math.min(100, Number(p.progress) || 0));
+            syncProjectProgressSlider(Math.max(0, Math.min(100, Number(p.progress) || 0)));
             document.getElementById('proj-update').value = p.update || '';
             document.getElementById('modal-project').classList.remove('hidden');
         }
         function closeProjectModal() {
             document.getElementById('modal-project').classList.add('hidden');
+        }
+        function syncProjectProgressSlider(value) {
+            const progress = Math.max(0, Math.min(100, Number(value) || 0));
+            document.getElementById('proj-progress').value = progress;
+            document.getElementById('proj-progress-slider').value = progress;
         }
         function handleProjectSubmit(e) {
             e.preventDefault();
