@@ -83,7 +83,7 @@
         <div class="glass-panel w-full max-w-md rounded-3xl p-8 border border-anfac-border shadow-2xl space-y-6 text-center">
             <!-- Official ANFAC Media Logo -->
             <div class="w-24 h-24 mx-auto rounded-full bg-white p-1 shadow-xl shadow-blue-600/20 flex items-center justify-center overflow-hidden">
-                <img id="auth-logo-img" src="src/logo.png.png" onerror="this.onerror=null; this.src=DEFAULT_COMPANY_LOGO;" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
+                <img id="auth-logo-img" src="logo.png.jpg" onerror="this.onerror=null; this.src=DEFAULT_COMPANY_LOGO;" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
             </div>
             <div>
                 <h1 class="text-2xl font-black text-white tracking-wider">ANFAC <span class="text-anfac-red text-sm">MEDIA SYSTEM</span></h1>
@@ -181,7 +181,7 @@
         <div class="p-5 border-b border-anfac-border flex items-center justify-between">
             <div class="flex items-center space-x-3 cursor-pointer" onclick="navigateHome()">
                 <div class="w-11 h-11 rounded-full bg-white flex items-center justify-center p-0.5 shadow-lg shadow-blue-600/20 shrink-0 overflow-hidden">
-                    <img id="sidebar-logo-img" src="src/logo.png.png" onerror="this.onerror=null; this.src=DEFAULT_COMPANY_LOGO;" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
+                    <img id="sidebar-logo-img" src="logo.png.jpg" onerror="this.onerror=null; this.src=DEFAULT_COMPANY_LOGO;" alt="ANFAC Media Logo" class="w-full h-full object-contain rounded-full">
                 </div>
                 <div>
                     <h1 class="font-black text-lg leading-none text-white tracking-wider flex items-center gap-1">
@@ -276,6 +276,18 @@
                 <button onclick="switchView('staff-portal')" id="nav-staff-portal" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-teal-600 text-white shadow-lg transition">
                     <i class="fa-solid fa-laptop-file w-4 text-center"></i>
                     <span>My Staff Dashboard</span>
+                </button>
+            </div>
+
+            <div id="director-nav-group" class="hidden space-y-1">
+                <div class="px-3 py-2 text-[10px] font-bold uppercase text-slate-500 tracking-wider">People & Performance</div>
+                <button onclick="switchView('director-dashboard')" id="nav-director-dashboard" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-white transition">
+                    <i class="fa-solid fa-chart-column w-4 text-center text-cyan-400"></i>
+                    <span>Team Dashboard</span>
+                </button>
+                <button onclick="switchView('staff')" id="nav-director-staff" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-white transition">
+                    <i class="fa-solid fa-users-gear w-4 text-center text-teal-400"></i>
+                    <span>Manage Staff</span>
                 </button>
             </div>
         </nav>
@@ -914,12 +926,67 @@
             <div id="equipment-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </div>
 
-        <!-- VIEW: ADMIN TEAM & STAFF MANAGEMENT + EASY INSERT DATA + TICKABLE CHECKLIST -->
+        <!-- VIEW: DIRECTOR TEAM PERFORMANCE DASHBOARD -->
+        <div id="view-director-dashboard" class="content-view hidden p-4 sm:p-6 lg:p-8 space-y-6">
+            <section class="relative overflow-hidden rounded-[2rem] border border-cyan-400/15 bg-gradient-to-br from-slate-950 via-cyan-950/60 to-indigo-950 p-6 sm:p-8 shadow-2xl shadow-cyan-950/30">
+                <div class="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-cyan-400/10 blur-3xl"></div>
+                <div class="absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-indigo-400/10 blur-3xl"></div>
+                <div class="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                    <div class="max-w-2xl">
+                        <span class="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-200">
+                            <i class="fa-solid fa-compass"></i> Director workspace
+                        </span>
+                        <h1 class="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">People first. Progress in focus.</h1>
+                        <p class="mt-2 max-w-xl text-sm leading-6 text-slate-300">A clear view of your team's profiles, daily work, and submitted updates — all in one place.</p>
+                    </div>
+                    <button onclick="switchView('staff')" class="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-cyan-400 px-5 py-3 text-xs font-extrabold text-slate-950 shadow-lg shadow-cyan-950/40 transition hover:bg-cyan-300">
+                        <i class="fa-solid fa-users-gear"></i> Open staff management
+                    </button>
+                </div>
+            </section>
+
+            <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div class="rounded-2xl border border-cyan-400/15 bg-gradient-to-br from-slate-900 to-cyan-950/50 p-5">
+                    <div class="flex items-center justify-between text-xs text-slate-400"><span>Team members</span><i class="fa-solid fa-people-group text-cyan-300"></i></div>
+                    <div id="director-staff-total" class="mt-3 text-3xl font-black text-white">0</div>
+                    <p class="mt-1 text-[11px] text-slate-400">Across all departments</p>
+                </div>
+                <div class="rounded-2xl border border-emerald-400/15 bg-gradient-to-br from-slate-900 to-emerald-950/40 p-5">
+                    <div class="flex items-center justify-between text-xs text-slate-400"><span>Tasks completed</span><i class="fa-solid fa-circle-check text-emerald-300"></i></div>
+                    <div id="director-task-progress" class="mt-3 text-3xl font-black text-white">0%</div>
+                    <p id="director-task-count" class="mt-1 text-[11px] text-slate-400">0 of 0 assigned tasks</p>
+                </div>
+                <div class="rounded-2xl border border-violet-400/15 bg-gradient-to-br from-slate-900 to-violet-950/40 p-5">
+                    <div class="flex items-center justify-between text-xs text-slate-400"><span>Departments</span><i class="fa-solid fa-building-user text-violet-300"></i></div>
+                    <div id="director-department-total" class="mt-3 text-3xl font-black text-white">0</div>
+                    <p class="mt-1 text-[11px] text-slate-400">Represented in your team</p>
+                </div>
+                <div class="rounded-2xl border border-amber-400/15 bg-gradient-to-br from-slate-900 to-amber-950/40 p-5">
+                    <div class="flex items-center justify-between text-xs text-slate-400"><span>Team updates</span><i class="fa-solid fa-inbox text-amber-300"></i></div>
+                    <div id="director-report-total" class="mt-3 text-3xl font-black text-white">0</div>
+                    <p class="mt-1 text-[11px] text-slate-400">Reports submitted by staff</p>
+                </div>
+            </section>
+
+            <section class="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 sm:p-6">
+                <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-cyan-300">Your people</span>
+                        <h2 class="mt-1 text-lg font-extrabold text-white">Staff profiles & daily progress</h2>
+                        <p class="mt-1 text-xs text-slate-400">Review each profile and jump straight to team management.</p>
+                    </div>
+                    <span id="director-team-updated" class="text-[10px] text-slate-500"></span>
+                </div>
+                <div id="director-team-grid" class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"></div>
+            </section>
+        </div>
+
+        <!-- VIEW: ADMIN / DIRECTOR TEAM & STAFF MANAGEMENT -->
         <div id="view-staff" class="content-view hidden p-4 sm:p-6 lg:p-8 space-y-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h2 class="text-xl font-bold text-white">Team & Staff Management (Admin Oversight)</h2>
-                    <p class="text-xs text-slate-400">Add staff accounts, easily insert daily activities, tick checklists, and download A4 PDF reports.</p>
+                    <h2 id="staff-view-title" class="text-xl font-bold text-white">Team & Staff Management (Admin Oversight)</h2>
+                    <p id="staff-view-description" class="text-xs text-slate-400">Add staff accounts, easily insert daily activities, tick checklists, and download A4 PDF reports.</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <button onclick="downloadAllStaffReportsA4()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-2">
@@ -1604,6 +1671,14 @@
                     <input type="text" id="st-role" placeholder="e.g., Lead Cinematographer" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
                 </div>
                 <div>
+                    <label class="block text-cyan-300 font-semibold mb-1">System access</label>
+                    <select id="st-access-role" class="w-full bg-slate-900 border border-cyan-500/30 rounded-xl px-3 py-2 text-white outline-none">
+                        <option value="employee">Staff — personal workspace only</option>
+                        <option value="director">Director — team dashboard & staff management</option>
+                    </select>
+                    <p class="mt-1 text-[10px] text-slate-500">Director access is limited to the team dashboard and staff management, not Super Admin finance or system settings.</p>
+                </div>
+                <div>
                     <label class="block text-slate-400 mb-1">Assigned Daily Activities (comma-separated)</label>
                     <input type="text" id="st-tasks" placeholder="e.g., Studio Setup, Client Video Edit, Daily Backup" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
                 </div>
@@ -1643,24 +1718,10 @@
     <script>
         const STORAGE_KEY = 'ANFAC_MEDIA_STATE_V9';
 
-        // Exact Vector Recreation of your uploaded ANFAC Media Logo
-        const DEFAULT_COMPANY_LOGO = "data:image/svg+xml;utf8," + encodeURIComponent(`
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500">
-            <defs>
-                <linearGradient id="ringGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#1A1B4B"/>
-                    <stop offset="55%" stop-color="#2B2450"/>
-                    <stop offset="100%" stop-color="#E6392E"/>
-                </linearGradient>
-            </defs>
-            <circle cx="250" cy="250" r="240" fill="#ffffff" stroke="url(#ringGrad)" stroke-width="10"/>
-            <path d="M225 65 L265 65 L350 285 L292 285 L268 225 L220 225 L140 265 Z" fill="#E6392E"/>
-            <circle cx="242" cy="145" r="26" fill="#ffffff"/>
-            <polygon points="237,134 237,156 254,145" fill="#E6392E"/>
-            <polygon points="120,295 215,175 245,198 308,125 294,112 362,92 342,162 328,148 248,248 215,222" fill="#1A1B4B"/>
-            <text x="245" y="362" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="900" font-size="68" fill="#E6392E" letter-spacing="2">ANFAC</text>
-            <text x="310" y="415" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-weight="600" font-size="52" fill="#1A1B4B">Media</text>
-        </svg>`);
+        const DEFAULT_COMPANY_LOGO = new URL(
+            location.pathname.toLowerCase().endsWith('/www/index.html') ? 'logo.png.jpg' : 'www/logo.png.jpg',
+            location.href
+        ).href;
 
         const DEFAULT_DATA = {
             currentUser: null,
@@ -1702,6 +1763,7 @@
             staff: [
                 {
                     id: 'ST-1',
+                    accessRole: 'employee',
                     name: 'Farah Mohamed',
                     username: 'farah',
                     password: 'farah123',
@@ -1717,6 +1779,7 @@
                 },
                 {
                     id: 'ST-2',
+                    accessRole: 'employee',
                     name: 'Hodan Jama',
                     username: 'hodan',
                     password: 'hodan123',
@@ -1795,9 +1858,13 @@
                 try {
                     const parsed = JSON.parse(saved);
                     state = { ...JSON.parse(JSON.stringify(DEFAULT_DATA)), ...parsed };
-                    if (!state.companyLogo || state.companyLogo.includes('polygon points=\'50,15')) {
+                    if (!state.companyLogo || state.companyLogo === 'logo.png.jpg' || state.companyLogo.startsWith('data:image/svg+xml')) {
                         state.companyLogo = DEFAULT_COMPANY_LOGO;
                     }
+                    state.staff = (state.staff || []).map(staff => ({
+                        ...staff,
+                        accessRole: staff.accessRole === 'director' ? 'director' : 'employee'
+                    }));
                     // Ensure Admin Email is set to anfacmedia252@gmail.com
                     if (!state.profile.email || state.profile.email.toLowerCase() === 'engjoseph@anfacmedia.com') {
                         state.profile.email = 'anfacmedia252@gmail.com';
@@ -1808,6 +1875,10 @@
             } else {
                 state = JSON.parse(JSON.stringify(DEFAULT_DATA));
             }
+            state.staff = (state.staff || []).map(staff => ({
+                ...staff,
+                accessRole: staff.accessRole === 'director' ? 'director' : 'employee'
+            }));
         }
 
         function saveStorage() {
@@ -2012,11 +2083,16 @@
 
             const matchedStaff = state.staff.find(s => (s.username || '').toLowerCase() === userInp.toLowerCase() && s.password === passInp);
             if (matchedStaff) {
-                state.currentUser = { role: 'staff', staffId: matchedStaff.id };
+                state.currentUser = {
+                    role: matchedStaff.accessRole === 'director' ? 'director' : 'staff',
+                    staffId: matchedStaff.id
+                };
                 errBox.classList.add('hidden');
                 saveStorage();
                 checkSessionAuth();
-                showToast(`Welcome to your portal, ${matchedStaff.name}`);
+                showToast(matchedStaff.accessRole === 'director'
+                    ? `Welcome to your team dashboard, ${matchedStaff.name}`
+                    : `Welcome to your portal, ${matchedStaff.name}`);
                 return;
             }
 
@@ -2036,15 +2112,36 @@
             if (state.currentUser.role === 'staff') {
                 document.getElementById('admin-nav-group').classList.add('hidden');
                 document.getElementById('staff-nav-group').classList.remove('hidden');
+                document.getElementById('director-nav-group').classList.add('hidden');
                 document.getElementById('header-search-container').classList.add('hidden');
                 document.getElementById('sidebar-subtitle').innerText = 'Staff Workspace';
                 renderStaffPortal();
                 switchView('staff-portal');
+            } else if (state.currentUser.role === 'director') {
+                const director = state.staff.find(staff => staff.id === state.currentUser.staffId);
+                if (!director || director.accessRole !== 'director') {
+                    state.currentUser = null;
+                    saveStorage();
+                    checkSessionAuth();
+                    return;
+                }
+                document.getElementById('admin-nav-group').classList.add('hidden');
+                document.getElementById('staff-nav-group').classList.add('hidden');
+                document.getElementById('director-nav-group').classList.remove('hidden');
+                document.getElementById('header-search-container').classList.add('hidden');
+                document.getElementById('sidebar-subtitle').innerText = 'Director Workspace';
+                document.getElementById('staff-view-title').innerText = 'People & Staff Management';
+                document.getElementById('staff-view-description').innerText = 'Manage employee profiles, assign daily activities, and review each person’s progress and reports.';
+                renderDirectorDashboard();
+                switchView('director-dashboard');
             } else {
                 document.getElementById('admin-nav-group').classList.remove('hidden');
                 document.getElementById('staff-nav-group').classList.add('hidden');
+                document.getElementById('director-nav-group').classList.add('hidden');
                 document.getElementById('header-search-container').classList.remove('hidden');
                 document.getElementById('sidebar-subtitle').innerText = 'System Control';
+                document.getElementById('staff-view-title').innerText = 'Team & Staff Management (Admin Oversight)';
+                document.getElementById('staff-view-description').innerText = 'Add staff accounts, easily insert daily activities, tick checklists, and download A4 PDF reports.';
                 syncProfileUI();
                 switchView('dashboard');
             }
@@ -2053,6 +2150,8 @@
         function navigateHome() {
             if (state.currentUser?.role === 'staff') {
                 switchView('staff-portal');
+            } else if (state.currentUser?.role === 'director') {
+                switchView('director-dashboard');
             } else {
                 switchView('dashboard');
             }
@@ -2061,6 +2160,8 @@
         function handleHeaderProfileClick() {
             if (state.currentUser?.role === 'staff') {
                 switchView('staff-portal');
+            } else if (state.currentUser?.role === 'director') {
+                switchView('director-dashboard');
             } else {
                 switchView('profile');
             }
@@ -2138,6 +2239,8 @@
         function switchView(viewName) {
             if (state.currentUser?.role === 'staff' && viewName !== 'staff-portal') {
                 viewName = 'staff-portal';
+            } else if (state.currentUser?.role === 'director' && !['director-dashboard', 'staff'].includes(viewName)) {
+                viewName = 'director-dashboard';
             }
             document.querySelectorAll('.content-view').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -2148,10 +2251,20 @@
             const activeView = document.getElementById(`view-${viewName}`);
             if (activeView) activeView.classList.remove('hidden');
 
-            const activeNav = document.getElementById(`nav-${viewName}`);
+            const activeNavId = state.currentUser?.role === 'director' && viewName === 'staff'
+                ? 'nav-director-staff'
+                : `nav-${viewName}`;
+            const activeNav = document.getElementById(activeNavId);
             if (activeNav) {
                 activeNav.classList.remove('text-slate-400');
-                activeNav.classList.add('bg-blue-600', 'text-white', 'shadow-lg');
+                activeNav.classList.add(
+                    state.currentUser?.role === 'director' ? 'bg-cyan-600' : 'bg-blue-600',
+                    'text-white',
+                    'shadow-lg'
+                );
+            }
+            if (state.currentUser?.role === 'director' && viewName === 'director-dashboard') {
+                renderDirectorDashboard();
             }
         }
 
@@ -2195,6 +2308,8 @@
             renderAdminStaffReports();
             if (state.currentUser?.role === 'staff') {
                 renderStaffPortal();
+            } else if (state.currentUser?.role === 'director') {
+                renderDirectorDashboard();
             }
             updateCharts();
         }
@@ -2756,6 +2871,78 @@
             `).join('') || `<div class="text-xs text-slate-500">No reports submitted yet.</div>`;
         }
 
+        function renderDirectorDashboard() {
+            if (state.currentUser?.role !== 'director') return;
+            const director = state.staff.find(staff => staff.id === state.currentUser.staffId);
+            if (!director) return;
+
+            document.getElementById('nav-user-fullname').innerText = director.name;
+            document.getElementById('nav-user-role').innerText = 'Director';
+            document.getElementById('nav-avatar-img').src = director.photo || 'https://placehold.co/100x100/0f172a/38bdf8?text=DR';
+
+            const team = state.staff;
+            const allTasks = team.flatMap(staff => staff.dailyTasks || []);
+            const completedTasks = allTasks.filter(task => task.done).length;
+            const departments = new Set(team.map(staff => staff.department).filter(Boolean));
+            const reports = state.staffReports || [];
+
+            document.getElementById('director-staff-total').innerText = team.length.toLocaleString();
+            document.getElementById('director-task-progress').innerText = `${allTasks.length ? Math.round(completedTasks / allTasks.length * 100) : 0}%`;
+            document.getElementById('director-task-count').innerText = `${completedTasks} of ${allTasks.length} assigned tasks complete`;
+            document.getElementById('director-department-total').innerText = departments.size.toLocaleString();
+            document.getElementById('director-report-total').innerText = reports.length.toLocaleString();
+            document.getElementById('director-team-updated').innerText = `Updated ${new Date().toLocaleString()}`;
+
+            const teamGrid = document.getElementById('director-team-grid');
+            teamGrid.innerHTML = team.map(staff => {
+                const tasks = staff.dailyTasks || [];
+                const doneTasks = tasks.filter(task => task.done).length;
+                const progress = calcStaffProgress(staff);
+                const recentReport = reports
+                    .filter(report => report.staffId === staff.id)
+                    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0];
+
+                return `
+                    <article class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/70 transition hover:border-cyan-400/30">
+                        <div class="h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-violet-500"></div>
+                        <div class="space-y-4 p-4">
+                            <div class="flex items-center gap-3">
+                                <img src="${staff.photo || 'https://placehold.co/100x100/0f172a/38bdf8?text=ST'}" alt="${staff.name}" class="h-12 w-12 rounded-2xl border border-slate-700 object-cover">
+                                <div class="min-w-0 flex-1">
+                                    <h3 class="truncate text-sm font-bold text-white">${staff.name}</h3>
+                                    <p class="truncate text-[11px] text-slate-400">${staff.role}</p>
+                                </div>
+                                <span class="rounded-full border border-emerald-400/15 bg-emerald-400/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-300">Team member</span>
+                            </div>
+                            <div class="flex items-center justify-between border-y border-slate-800/80 py-3 text-[11px]">
+                                <span class="rounded-lg bg-cyan-400/10 px-2.5 py-1 font-semibold text-cyan-200">${staff.department}</span>
+                                <span class="text-slate-400">${doneTasks}/${tasks.length} tasks done</span>
+                            </div>
+                            <div>
+                                <div class="mb-1.5 flex justify-between text-[10px]"><span class="text-slate-400">Daily progress</span><span class="font-bold text-cyan-300">${progress}%</span></div>
+                                <div class="h-1.5 overflow-hidden rounded-full bg-slate-800"><div class="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500" style="width:${progress}%"></div></div>
+                            </div>
+                            <div class="rounded-xl bg-slate-900/80 p-3">
+                                <p class="mb-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">Latest team update</p>
+                                <p class="line-clamp-2 text-[11px] leading-relaxed text-slate-300">${recentReport ? recentReport.summary : 'No report submitted yet.'}</p>
+                                ${recentReport ? `<p class="mt-1.5 text-[9px] text-slate-500">${recentReport.type} · ${recentReport.date}</p>` : ''}
+                            </div>
+                            <button onclick="switchView('staff')" class="w-full rounded-xl border border-slate-700 px-3 py-2 text-[11px] font-bold text-slate-200 transition hover:border-cyan-400/40 hover:bg-cyan-400/5 hover:text-cyan-200">
+                                View & manage team <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+                    </article>
+                `;
+            }).join('') || `
+                <div class="col-span-full rounded-2xl border border-dashed border-slate-700 px-6 py-12 text-center">
+                    <i class="fa-solid fa-user-plus text-2xl text-cyan-300"></i>
+                    <p class="mt-3 text-sm font-bold text-white">Your team is ready to grow</p>
+                    <p class="mt-1 text-xs text-slate-400">Add employees in staff management to begin tracking their progress.</p>
+                    <button onclick="switchView('staff')" class="mt-4 rounded-xl bg-cyan-400 px-4 py-2 text-xs font-bold text-slate-950">Open staff management</button>
+                </div>
+            `;
+        }
+
         function toggleStaffTask(idx) {
             const staff = state.staff.find(s => s.id === state.currentUser?.staffId);
             if (!staff || !staff.dailyTasks[idx]) return;
@@ -2763,6 +2950,7 @@
             saveStorage();
             renderStaffPortal();
             renderStaffGrid();
+            renderDirectorDashboard();
             showToast(staff.dailyTasks[idx].done ? "Activity ticked as Done!" : "Activity marked Pending");
         }
 
@@ -2778,6 +2966,7 @@
             saveStorage();
             renderStaffPortal();
             renderStaffGrid();
+            renderDirectorDashboard();
             showToast("Daily activity task added & saved!");
         }
 
@@ -2791,6 +2980,7 @@
                 saveStorage();
                 renderStaffPortal();
                 renderStaffGrid();
+                renderDirectorDashboard();
                 showToast("Staff profile photo updated & saved!");
             });
         }
@@ -2816,6 +3006,7 @@
             saveStorage();
             renderStaffPortal();
             renderAdminStaffReports();
+            renderDirectorDashboard();
             showToast("Report sent & saved to Super Administrator!");
         }
 
@@ -2824,6 +3015,7 @@
             state.staffReports = state.staffReports.filter(r => r.id !== id);
             saveStorage();
             renderAdminStaffReports();
+            renderDirectorDashboard();
             showToast("Report deleted", "info");
         }
 
@@ -3421,6 +3613,8 @@
             document.getElementById('st-username').value = '';
             document.getElementById('st-password').value = '';
             document.getElementById('st-role').value = '';
+            document.getElementById('st-access-role').value = 'employee';
+            document.getElementById('st-access-role').disabled = false;
             document.getElementById('st-salary').value = '';
             document.getElementById('st-tasks').value = 'Prepare Camera 5D & Audio, Shoot Client Commercial';
             document.getElementById('st-photo-data').value = '';
@@ -3431,6 +3625,7 @@
         function editStaff(id) {
             const s = state.staff.find(item => item.id === id);
             if (!s) return;
+            const isDirectorEditingOwnAccess = state.currentUser?.role === 'director' && state.currentUser.staffId === id;
             document.getElementById('st-id').value = s.id;
             document.getElementById('modal-staff-title').innerText = `Edit Staff (${s.name})`;
             document.getElementById('st-name').value = s.name;
@@ -3438,6 +3633,8 @@
             document.getElementById('st-password').value = s.password || '';
             document.getElementById('st-department').value = s.department;
             document.getElementById('st-role').value = s.role;
+            document.getElementById('st-access-role').value = s.accessRole === 'director' ? 'director' : 'employee';
+            document.getElementById('st-access-role').disabled = isDirectorEditingOwnAccess;
             document.getElementById('st-salary').value = s.salary;
             document.getElementById('st-tasks').value = (s.dailyTasks || []).map(t => t.title).join(', ');
             document.getElementById('st-photo-data').value = s.photo || '';
@@ -3464,9 +3661,21 @@
             const password = document.getElementById('st-password').value.trim();
             const department = document.getElementById('st-department').value;
             const role = document.getElementById('st-role').value.trim();
+            const accessRole = document.getElementById('st-access-role').value;
             const salary = parseFloat(document.getElementById('st-salary').value) || 0;
             const photo = document.getElementById('st-photo-data').value || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0d9488&color=fff&size=200`;
             const rawTasks = document.getElementById('st-tasks').value.split(',').map(t => t.trim()).filter(Boolean);
+            const usernameTaken = state.staff.some(staff =>
+                staff.id !== id && (staff.username || '').toLowerCase() === username.toLowerCase()
+            );
+            if (usernameTaken) {
+                showToast('That username is already assigned to another team member.', 'error');
+                return;
+            }
+            if (!['employee', 'director'].includes(accessRole)) {
+                showToast('Choose a valid staff access level.', 'error');
+                return;
+            }
 
             if (id) {
                 const idx = state.staff.findIndex(s => s.id === id);
@@ -3476,25 +3685,31 @@
                         const found = existingTasks.find(et => et.title === title);
                         return found ? found : { title, done: false };
                     });
-                    state.staff[idx] = { ...state.staff[idx], name, username, password, department, role, salary, photo, dailyTasks: updatedTasks };
+                    state.staff[idx] = { ...state.staff[idx], name, username, password, department, role, accessRole, salary, photo, dailyTasks: updatedTasks };
                 }
             } else {
                 const dailyTasks = rawTasks.map(title => ({ title, done: false }));
                 const newStaffId = 'ST-' + Math.floor(100 + Math.random() * 900);
-                state.staff.unshift({ id: newStaffId, name, username, password, department, role, salary, photo, dailyTasks });
+                state.staff.unshift({ id: newStaffId, name, username, password, department, role, accessRole, salary, photo, dailyTasks });
             }
             saveStorage();
             closeStaffModal();
             populateStaffSelectors();
             renderStaffGrid();
+            renderDirectorDashboard();
             showToast(`Staff member "${name}" & login credentials saved!`, 'success');
         }
         function deleteStaff(id) {
+            if (state.currentUser?.role === 'director' && state.currentUser.staffId === id) {
+                showToast('You cannot remove your own Director account.', 'error');
+                return;
+            }
             if (!confirm('Remove this staff record?')) return;
             state.staff = state.staff.filter(s => s.id !== id);
             saveStorage();
             populateStaffSelectors();
             renderStaffGrid();
+            renderDirectorDashboard();
             showToast('Staff record removed', 'info');
         }
 
