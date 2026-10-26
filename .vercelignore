@@ -1,0 +1,12 @@
+.env
+.env.*
+.vercel/
+node_modules/
+*.db
+database.json
+desktop-app/
+supabase/
+.agents/
+.claude/
+.vscode/
+skills-lock.json
