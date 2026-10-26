@@ -56,6 +56,19 @@
         ::-webkit-scrollbar-track { background: #070c18; }
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #0284c7; }
+        #book-datetime {
+            color-scheme: dark;
+            accent-color: #f59e0b;
+        }
+        #book-datetime::-webkit-calendar-picker-indicator {
+            cursor: pointer;
+            filter: invert(0.75);
+            opacity: 0.85;
+        }
+        #book-datetime::-webkit-calendar-picker-indicator:hover {
+            filter: invert(0.9);
+            opacity: 1;
+        }
 
         /* Dedicated Print Engine for A5 Receipts/Invoices & A4 Staff Reports */
         #print-mount { display: none; }
@@ -844,7 +857,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                     <h2 class="text-xl font-bold text-white">Bookings & Studio Calendar</h2>
-                    <p class="text-xs text-slate-400">Schedule studio recording sessions, equipment rentals, and client meetings.</p>
+                    <p class="text-xs text-slate-400">Schedule studio recording sessions, equipment rentals, and client meetings. Select a date to view its bookings.</p>
                 </div>
                 <button onclick="openBookingModal()" class="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-xl shadow-lg transition flex items-center gap-2">
                     <i class="fa-solid fa-calendar-plus"></i> New Booking
@@ -854,10 +867,11 @@
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="glass-panel p-5 rounded-2xl border border-anfac-border space-y-4">
                     <div class="flex items-center justify-between font-bold text-sm text-white">
-                        <span>October 2026</span>
-                        <div class="flex gap-1 text-slate-400">
-                            <button class="p-1 hover:text-white"><i class="fa-solid fa-chevron-left text-xs"></i></button>
-                            <button class="p-1 hover:text-white"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                        <span id="calendar-month-label">Calendar</span>
+                        <div class="flex items-center gap-2 text-slate-400">
+                            <button type="button" onclick="goToToday()" class="text-[10px] hover:text-white">Today</button>
+                            <button type="button" onclick="changeCalendarMonth(-1)" aria-label="Previous month" class="p-1 hover:text-white"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                            <button type="button" onclick="changeCalendarMonth(1)" aria-label="Next month" class="p-1 hover:text-white"><i class="fa-solid fa-chevron-right text-xs"></i></button>
                         </div>
                     </div>
                     <div class="grid grid-cols-7 text-center text-[10px] font-bold text-slate-500 uppercase">
@@ -869,7 +883,10 @@
                 <div class="lg:col-span-2 glass-panel p-5 rounded-2xl border border-anfac-border space-y-4">
                     <div class="flex items-center justify-between">
                         <h3 class="text-sm font-bold text-white">Scheduled Bookings & Sessions</h3>
-                        <span class="text-xs text-slate-400 font-mono" id="bookings-count-display">0 Bookings</span>
+                        <div class="flex items-center gap-3">
+                            <button type="button" id="bookings-show-all" onclick="clearCalendarFilter()" class="hidden text-[10px] text-amber-400 hover:text-amber-300">Show all dates</button>
+                            <span class="text-xs text-slate-400 font-mono" id="bookings-count-display">0 Bookings</span>
+                        </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
@@ -1492,8 +1509,14 @@
                     <input type="text" id="book-client" required placeholder="Client name" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
                 </div>
                 <div>
-                    <label class="block text-slate-400 mb-1">Date & Time</label>
-                    <input type="text" id="book-datetime" placeholder="2026-10-25 14:00" required class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                    <label for="book-datetime" class="mb-1.5 flex items-center gap-2 font-semibold text-slate-300">
+                        <i class="fa-regular fa-calendar text-amber-400"></i> Date & Time
+                    </label>
+                    <div class="relative">
+                        <input type="datetime-local" id="book-datetime" required class="w-full rounded-xl border border-slate-700 bg-slate-900 py-2.5 pl-10 pr-10 text-sm text-white shadow-inner shadow-black/20 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20">
+                        <i class="fa-regular fa-clock pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-amber-400/80"></i>
+                    </div>
+                    <p class="mt-1 text-[10px] text-slate-500">Choose the session date and start time.</p>
                 </div>
                 <div>
                     <label class="block text-slate-400 mb-1">Status</label>
@@ -1686,6 +1709,9 @@
         let activeResetOtp = null;
         let backendAuthenticated = false;
         let pendingStateSave = Promise.resolve();
+        let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        let selectedCalendarDate = '';
+        let calendarFilterDate = null;
         let revenueChartInstance = null;
         let expenseChartInstance = null;
         let channelChartInstance = null;
@@ -1830,6 +1856,7 @@
             loadStorage();
             initCharts();
             startLiveClock();
+            selectedCalendarDate = getLocalDateKey(new Date());
             populateCalendar();
             syncProfileUI();
             renderAllViews();
@@ -2201,19 +2228,131 @@
             }, 1000);
         }
 
+        function getLocalDateKey(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function getBookingDateKey(datetime) {
+            const value = String(datetime || '').trim();
+            const datePrefix = value.match(/^(\d{4}-\d{2}-\d{2})/);
+            if (datePrefix) return datePrefix[1];
+            const date = new Date(value);
+            return Number.isNaN(date.getTime()) ? '' : getLocalDateKey(date);
+        }
+
+        function formatBookingDate(datetime) {
+            const dateKey = getBookingDateKey(datetime);
+            if (!dateKey) return 'Invalid date';
+            const [year, month, day] = dateKey.split('-').map(Number);
+            return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        }
+
+        function formatBookingTime(datetime) {
+            const value = String(datetime || '').trim();
+            const time = value.match(/(?:T|\s)(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?$/i);
+            if (!time) return '';
+            const hours = Number(time[1]);
+            const minutes = Number(time[2]);
+            if (hours > 23 || minutes > 59) return '';
+            return new Date(2000, 0, 1, hours, minutes).toLocaleTimeString(undefined, {
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
+
+        function formatBookingInputValue(datetime) {
+            const value = String(datetime || '').trim();
+            const localDateTime = value.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+            if (localDateTime) return `${localDateTime[1]}T${localDateTime[2]}`;
+
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return '';
+            const dateKey = getLocalDateKey(date);
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${dateKey}T${hours}:${minutes}`;
+        }
+
+        function changeCalendarMonth(offset) {
+            calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + offset, 1);
+            selectedCalendarDate = getLocalDateKey(calendarMonth);
+            calendarFilterDate = null;
+            populateCalendar();
+            renderBookingsTable();
+        }
+
+        function goToToday() {
+            const today = new Date();
+            calendarMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+            selectedCalendarDate = getLocalDateKey(today);
+            calendarFilterDate = null;
+            populateCalendar();
+            renderBookingsTable();
+        }
+
+        function selectCalendarDate(dateKey) {
+            selectedCalendarDate = dateKey;
+            calendarFilterDate = dateKey;
+            populateCalendar();
+            renderBookingsTable();
+        }
+
+        function clearCalendarFilter() {
+            calendarFilterDate = null;
+            renderBookingsTable();
+        }
+
         function populateCalendar() {
             const grid = document.getElementById('calendar-days-grid');
             if (!grid) return;
-            let daysHtml = '';
-            for (let i = 1; i <= 31; i++) {
-                const isSelected = i === 14;
-                daysHtml += `
-                    <div class="py-1 rounded-lg ${isSelected ? 'bg-amber-600 font-bold text-white shadow' : 'text-slate-400 hover:bg-slate-800'} cursor-pointer">
-                        ${i}
-                    </div>
-                `;
+            const monthLabel = document.getElementById('calendar-month-label');
+            if (monthLabel) {
+                monthLabel.textContent = calendarMonth.toLocaleDateString(undefined, {
+                    month: 'long',
+                    year: 'numeric'
+                });
             }
-            grid.innerHTML = daysHtml;
+
+            const year = calendarMonth.getFullYear();
+            const month = calendarMonth.getMonth();
+            const firstWeekday = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const bookingsByDate = state.bookings.reduce((counts, booking) => {
+                const dateKey = getBookingDateKey(booking.datetime);
+                if (dateKey) counts[dateKey] = (counts[dateKey] || 0) + 1;
+                return counts;
+            }, {});
+            const cells = Array.from({ length: firstWeekday }, () => '<span aria-hidden="true"></span>');
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const date = new Date(year, month, day);
+                const dateKey = getLocalDateKey(date);
+                const bookingCount = bookingsByDate[dateKey] || 0;
+                const isSelected = dateKey === selectedCalendarDate;
+                const isToday = dateKey === getLocalDateKey(new Date());
+                const label = `${date.toLocaleDateString(undefined, {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                })}${bookingCount ? `, ${bookingCount} booking${bookingCount === 1 ? '' : 's'}` : ''}`;
+                cells.push(`
+                    <button type="button" onclick="selectCalendarDate('${dateKey}')" aria-label="${label}" aria-pressed="${isSelected}" title="${label}"
+                        class="relative min-h-9 rounded-lg py-1 ${isSelected ? 'bg-amber-600 font-bold text-white shadow' : 'text-slate-400 hover:bg-slate-800'} ${isToday && !isSelected ? 'ring-1 ring-amber-500' : ''}">
+                        ${day}
+                        ${bookingCount ? '<span class="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-amber-300"></span>' : ''}
+                    </button>
+                `);
+            }
+
+            while (cells.length % 7 !== 0) cells.push('<span aria-hidden="true"></span>');
+            grid.innerHTML = cells.join('');
         }
 
         function renderAllViews() {
@@ -2224,6 +2363,7 @@
             renderCampaignsGrid();
             renderClientsGrid();
             renderProjectsGrid();
+            populateCalendar();
             renderBookingsTable();
             renderEquipmentGrid();
             renderStaffGrid();
@@ -2461,13 +2601,37 @@
         function renderBookingsTable() {
             const tbody = document.getElementById('bookings-table-body');
             if (!tbody) return;
-            document.getElementById('bookings-count-display').innerText = `${state.bookings.length} Bookings`;
+            const bookings = calendarFilterDate
+                ? state.bookings.filter(booking => getBookingDateKey(booking.datetime) === calendarFilterDate)
+                : state.bookings;
+            const countDisplay = document.getElementById('bookings-count-display');
+            const showAllButton = document.getElementById('bookings-show-all');
+            if (countDisplay) {
+                countDisplay.innerText = calendarFilterDate
+                    ? `${bookings.length} on ${formatBookingDate(calendarFilterDate)}`
+                    : `${bookings.length} Bookings`;
+            }
+            if (showAllButton) showAllButton.classList.toggle('hidden', !calendarFilterDate);
 
-            tbody.innerHTML = state.bookings.map(b => `
+            tbody.innerHTML = bookings.length ? bookings.map(b => `
                 <tr class="hover:bg-slate-800/40">
                     <td class="py-3 px-4 font-semibold text-white">${b.title}</td>
                     <td class="py-3 px-4 text-slate-400">${b.client}</td>
-                    <td class="py-3 px-4 font-mono text-slate-300">${b.datetime}</td>
+                    <td class="py-3 px-4">
+                        <div class="flex min-w-32 items-center gap-2.5">
+                            <span class="flex h-9 w-9 shrink-0 flex-col items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-300">
+                                <i class="fa-regular fa-calendar text-xs"></i>
+                                <span class="text-[9px] font-bold leading-none">${getBookingDateKey(b.datetime).slice(8, 10) || '--'}</span>
+                            </span>
+                            <span class="flex flex-col gap-0.5">
+                                <span class="font-semibold text-slate-200">${formatBookingDate(b.datetime)}</span>
+                                <span class="flex items-center gap-1 text-[10px] text-slate-500">
+                                    <i class="fa-regular fa-clock text-amber-400/80"></i>
+                                    ${formatBookingTime(b.datetime) || 'Time not set'}
+                                </span>
+                            </span>
+                        </div>
+                    </td>
                     <td class="py-3 px-4">
                         <span class="px-2 py-0.5 rounded text-[10px] font-bold ${b.status === 'Confirmed' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'}">
                             ${b.status}
@@ -2478,7 +2642,13 @@
                         <button onclick="deleteBooking('${b.id}')" class="text-slate-500 hover:text-red-400"><i class="fa-solid fa-trash"></i></button>
                     </td>
                 </tr>
-            `).join('');
+            `).join('') : `
+                <tr>
+                    <td colspan="5" class="py-8 px-4 text-center text-slate-500">
+                        ${calendarFilterDate ? 'No bookings for this date.' : 'No bookings scheduled yet.'}
+                    </td>
+                </tr>
+            `;
         }
 
         // ================= EQUIPMENT WITH TOOL TYPE & STAFF TAKEN NAME =================
@@ -3347,7 +3517,8 @@
             document.getElementById('modal-book-title').innerText = 'Create Studio Booking';
             document.getElementById('book-title').value = '';
             document.getElementById('book-client').value = '';
-            document.getElementById('book-datetime').value = '';
+            document.getElementById('book-datetime').value = `${selectedCalendarDate || getLocalDateKey(new Date())}T09:00`;
+            document.getElementById('book-status').value = 'Confirmed';
             document.getElementById('modal-booking').classList.remove('hidden');
         }
         function editBooking(id) {
@@ -3357,8 +3528,8 @@
             document.getElementById('modal-book-title').innerText = `Edit Booking (${b.title})`;
             document.getElementById('book-title').value = b.title;
             document.getElementById('book-client').value = b.client;
-            document.getElementById('book-datetime').value = b.datetime;
-            document.getElementById('book-status').value = b.status;
+            document.getElementById('book-datetime').value = formatBookingInputValue(b.datetime);
+            document.getElementById('book-status').value = b.status || 'Confirmed';
             document.getElementById('modal-booking').classList.remove('hidden');
         }
         function closeBookingModal() {
@@ -3380,6 +3551,7 @@
             }
             saveStorage();
             closeBookingModal();
+            populateCalendar();
             renderBookingsTable();
             showToast('Booking saved!', 'success');
         }
@@ -3387,6 +3559,7 @@
             if (!confirm('Delete this booking?')) return;
             state.bookings = state.bookings.filter(b => b.id !== id);
             saveStorage();
+            populateCalendar();
             renderBookingsTable();
             showToast('Booking deleted', 'info');
         }
