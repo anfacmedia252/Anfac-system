@@ -244,8 +244,8 @@
                 </button>
 
                 <button onclick="switchView('analytics')" id="nav-analytics" class="nav-btn w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800/60 hover:text-white transition">
-                    <i class="fa-solid fa-calculator w-4 text-center"></i>
-                    <span>Campaign Analytics</span>
+                    <i class="fa-solid fa-chart-pie w-4 text-center"></i>
+                    <span>Revenue & Growth</span>
                 </button>
 
                 <div class="pt-4 px-3 py-2 text-[10px] font-bold uppercase text-slate-500 tracking-wider">Enterprise Modules</div>
@@ -805,50 +805,118 @@
             </div>
         </div>
 
-        <!-- VIEW: CAMPAIGN ANALYTICS -->
+        <!-- VIEW: REVENUE & GROWTH -->
         <div id="view-analytics" class="content-view hidden p-4 sm:p-6 lg:p-8 space-y-6">
-            <div>
-                <h2 class="text-xl font-bold text-white">Campaign Analytics & ROAS Calculator</h2>
-                <p class="text-xs text-slate-400">Calculate Return on Ad Spend (ROAS) and estimate client return metrics.</p>
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-white">Revenue & Growth</h2>
+                    <p class="text-xs text-slate-400">Track monthly revenue growth, campaign returns, and advertising efficiency from your recorded data.</p>
+                </div>
+                <button type="button" onclick="switchView('services')" class="self-start rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-blue-500">
+                    <i class="fa-solid fa-bullhorn mr-1"></i> Manage campaigns
+                </button>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                <article class="glass-panel rounded-2xl border border-anfac-border p-4">
+                    <p class="text-xs font-semibold text-slate-400">Revenue this month</p>
+                    <p id="growth-current-revenue" class="mt-2 text-xl font-black text-emerald-400">$0.00</p>
+                    <p id="growth-current-period" class="mt-1 text-[10px] text-slate-500">Current month</p>
+                </article>
+                <article class="glass-panel rounded-2xl border border-anfac-border p-4">
+                    <p class="text-xs font-semibold text-slate-400">Monthly revenue growth</p>
+                    <p id="growth-revenue-change" class="mt-2 text-xl font-black text-white">—</p>
+                    <p id="growth-previous-revenue" class="mt-1 text-[10px] text-slate-500">Compared with previous month</p>
+                </article>
+                <article class="glass-panel rounded-2xl border border-anfac-border p-4">
+                    <p class="text-xs font-semibold text-slate-400">Campaign ad spend</p>
+                    <p id="growth-campaign-spend" class="mt-2 text-xl font-black text-amber-400">$0.00</p>
+                    <p id="growth-campaign-count" class="mt-1 text-[10px] text-slate-500">0 campaigns</p>
+                </article>
+                <article class="glass-panel rounded-2xl border border-anfac-border p-4">
+                    <p class="text-xs font-semibold text-slate-400">Tracked campaign revenue</p>
+                    <p id="growth-campaign-revenue" class="mt-2 text-xl font-black text-sky-400">$0.00</p>
+                    <p id="growth-budget-remaining" class="mt-1 text-[10px] text-slate-500">Budget remaining: $0.00</p>
+                </article>
+                <article class="glass-panel rounded-2xl border border-anfac-border p-4">
+                    <p class="text-xs font-semibold text-slate-400">Blended campaign ROAS</p>
+                    <p id="growth-blended-roas" class="mt-2 text-xl font-black text-white">—</p>
+                    <p class="mt-1 text-[10px] text-slate-500">Tracked revenue ÷ ad spend</p>
+                </article>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                <section class="glass-panel space-y-4 rounded-2xl border border-anfac-border p-5">
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Revenue trend</h3>
+                        <p class="text-[11px] text-slate-400">Monthly recorded income compared with expenses over the past 12 months.</p>
+                    </div>
+                    <div class="relative h-64"><canvas id="revenueGrowthChart"></canvas></div>
+                </section>
+                <section class="glass-panel space-y-4 rounded-2xl border border-anfac-border p-5">
+                    <div>
+                        <h3 class="text-sm font-bold text-white">Campaign performance comparison</h3>
+                        <p class="text-[11px] text-slate-400">Compare ad spend against revenue tracked on each campaign.</p>
+                    </div>
+                    <div class="relative h-64"><canvas id="campaignPerformanceChart"></canvas></div>
+                </section>
+            </div>
+
+            <section class="glass-panel space-y-4 rounded-2xl border border-anfac-border p-5">
+                <div>
+                    <h3 class="text-sm font-bold text-white">Campaign performance</h3>
+                    <p class="text-[11px] text-slate-400">Track each campaign’s channel, spending, recorded returns, and ROAS.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[700px] text-left text-xs">
+                        <thead>
+                            <tr class="border-b border-anfac-border bg-slate-900/50 text-[10px] font-semibold uppercase text-slate-400">
+                                <th class="px-3 py-3">Campaign</th><th class="px-3 py-3">Channel</th><th class="px-3 py-3">Status</th>
+                                <th class="px-3 py-3 text-right">Ad spend</th><th class="px-3 py-3 text-right">Tracked revenue</th><th class="px-3 py-3 text-right">ROAS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="growth-campaign-table" class="divide-y divide-slate-800/60"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <div class="glass-panel p-6 rounded-2xl border border-anfac-border space-y-4">
                     <h3 class="text-sm font-bold text-white flex items-center gap-2">
                         <i class="fa-solid fa-calculator text-blue-400"></i>
-                        <span>Live ROAS & Campaign ROI Calculator</span>
+                        <span>ROAS & campaign return calculator</span>
                     </h3>
+                    <p class="text-[11px] text-slate-400">Enter a spend and revenue estimate to calculate return. This calculator does not change campaign records.</p>
 
                     <div class="space-y-3 text-xs">
                         <div>
-                            <label class="block text-slate-400 mb-1">Total Ad Spend ($)</label>
-                            <input type="number" id="roas-spend" value="2500" oninput="calculateROAS()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white outline-none">
+                            <label for="roas-spend" class="block text-slate-400 mb-1">Total ad spend ($)</label>
+                            <input type="number" id="roas-spend" value="0" min="0" step="0.01" oninput="calculateROAS()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white outline-none">
                         </div>
 
                         <div>
-                            <label class="block text-slate-400 mb-1">Generated Revenue ($)</label>
-                            <input type="number" id="roas-revenue" value="11250" oninput="calculateROAS()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white outline-none">
+                            <label for="roas-revenue" class="block text-slate-400 mb-1">Generated revenue ($)</label>
+                            <input type="number" id="roas-revenue" value="0" min="0" step="0.01" oninput="calculateROAS()" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-white outline-none">
                         </div>
 
                         <div class="p-4 bg-slate-900/80 rounded-xl border border-slate-800 space-y-2">
                             <div class="flex justify-between items-center">
-                                <span class="text-slate-400">Target ROAS Multiplier:</span>
-                                <span id="roas-result-ratio" class="text-lg font-black text-emerald-400">4.50x</span>
+                                <span class="text-slate-400">Return on ad spend:</span>
+                                <span id="roas-result-ratio" class="text-lg font-black text-emerald-400">—</span>
                             </div>
                             <div class="flex justify-between items-center">
-                                <span class="text-slate-400">Calculated Profit:</span>
-                                <span id="roas-result-profit" class="text-sm font-bold text-white">$8,750.00</span>
+                                <span class="text-slate-400">Revenue minus ad spend:</span>
+                                <span id="roas-result-profit" class="text-sm font-bold text-white">$0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="glass-panel p-6 rounded-2xl border border-anfac-border space-y-4">
-                    <h3 class="text-sm font-bold text-white">Ad Spend by Channel</h3>
-                    <p class="text-xs text-slate-400">Meta Ads vs Google PPC vs Influencer PR networks.</p>
-                    <div class="h-48 relative flex items-center justify-center">
-                        <canvas id="channelAnalyticsChart"></canvas>
-                    </div>
+                <div class="glass-panel flex flex-col justify-center rounded-2xl border border-anfac-border p-6">
+                    <h3 class="text-sm font-bold text-white">Make your campaign insights useful</h3>
+                    <p class="mt-2 text-xs leading-relaxed text-slate-400">Add each campaign’s actual ad spend and the revenue it generated in Services & Ads. Revenue growth is calculated from recorded income transactions; campaign ROAS uses the revenue tracked on campaign records.</p>
+                    <button type="button" onclick="switchView('services')" class="mt-4 self-start rounded-xl border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-xs font-bold text-blue-300 transition hover:bg-blue-500/20">
+                        Update campaign results <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1398,11 +1466,28 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-slate-400 mb-1">Total Budget ($)</label>
-                        <input type="number" id="camp-budget" required placeholder="5000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                        <input type="number" id="camp-budget" required min="0" step="0.01" placeholder="5000" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
                     </div>
                     <div>
                         <label class="block text-slate-400 mb-1">Spent So Far ($)</label>
-                        <input type="number" id="camp-spent" value="0" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                        <input type="number" id="camp-spent" value="0" min="0" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="camp-revenue" class="block text-slate-400 mb-1">Revenue Generated ($)</label>
+                        <input type="number" id="camp-revenue" value="0" min="0" step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                    </div>
+                    <div>
+                        <label for="camp-channel" class="block text-slate-400 mb-1">Marketing Channel</label>
+                        <select id="camp-channel" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                            <option value="Meta Ads">Meta Ads</option>
+                            <option value="Google Ads">Google Ads</option>
+                            <option value="TikTok Ads">TikTok Ads</option>
+                            <option value="Influencer / PR">Influencer / PR</option>
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
                 </div>
 
@@ -1742,8 +1827,9 @@
         let dashboardStartDate = '';
         let dashboardEndDate = '';
         let revenueChartInstance = null;
+        let revenueGrowthChartInstance = null;
         let expenseChartInstance = null;
-        let channelChartInstance = null;
+        let campaignPerformanceChartInstance = null;
 
         // Auto-compress uploaded images so localStorage never overflows
         function compressImageFile(file, maxSize = 320, callback) {
@@ -2390,6 +2476,7 @@
             renderDashboardTable();
             renderFinanceTable();
             renderCampaignsGrid();
+            renderRevenueGrowth();
             renderClientsGrid();
             renderProjectsGrid();
             populateCalendar();
@@ -2626,7 +2713,11 @@
             if (!grid) return;
 
             grid.innerHTML = state.campaigns.map(c => {
-                const percent = Math.min(100, Math.round((c.spent / c.budget) * 100));
+                const budget = Math.max(0, Number(c.budget) || 0);
+                const spent = Math.max(0, Number(c.spent) || 0);
+                const revenue = Math.max(0, Number(c.revenue) || 0);
+                const percent = budget > 0 ? Math.min(100, Math.round((spent / budget) * 100)) : 0;
+                const roas = spent > 0 ? `${(revenue / spent).toFixed(2)}x ROAS` : 'ROAS unavailable';
                 return `
                     <div class="glass-panel p-5 rounded-2xl border border-anfac-border space-y-4">
                         <div class="flex items-center justify-between">
@@ -2649,10 +2740,14 @@
                         <div class="space-y-1">
                             <div class="flex justify-between text-xs font-mono">
                                 <span class="text-slate-400">Budget Spent:</span>
-                                <span class="text-white font-bold">$${c.spent} / $${c.budget}</span>
+                                <span class="text-white font-bold">${formatRevenueAmount(spent)} / ${formatRevenueAmount(budget)}</span>
                             </div>
                             <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
                                 <div class="h-full bg-blue-500" style="width: ${percent}%"></div>
+                            </div>
+                            <div class="flex justify-between pt-2 text-[10px]">
+                                <span class="text-slate-400">${c.channel || 'Channel not set'} · ${roas}</span>
+                                <span class="font-semibold text-emerald-400">${formatRevenueAmount(revenue)} revenue</span>
                             </div>
                         </div>
                     </div>
@@ -3471,6 +3566,8 @@
             document.getElementById('camp-client').value = '';
             document.getElementById('camp-budget').value = '';
             document.getElementById('camp-spent').value = '0';
+            document.getElementById('camp-revenue').value = '0';
+            document.getElementById('camp-channel').value = 'Meta Ads';
             document.getElementById('camp-status').value = 'Active';
             document.getElementById('modal-campaign').classList.remove('hidden');
         }
@@ -3484,6 +3581,8 @@
             document.getElementById('camp-client').value = c.client;
             document.getElementById('camp-budget').value = c.budget;
             document.getElementById('camp-spent').value = c.spent;
+            document.getElementById('camp-revenue').value = c.revenue ?? 0;
+            document.getElementById('camp-channel').value = c.channel || 'Other';
             document.getElementById('camp-status').value = c.status;
             document.getElementById('modal-campaign').classList.remove('hidden');
         }
@@ -3497,25 +3596,27 @@
             const id = document.getElementById('camp-id').value;
             const name = document.getElementById('camp-name').value;
             const client = document.getElementById('camp-client').value;
-            const budget = parseFloat(document.getElementById('camp-budget').value) || 0;
-            const spent = parseFloat(document.getElementById('camp-spent').value) || 0;
+            const budget = Math.max(0, Number(document.getElementById('camp-budget').value) || 0);
+            const spent = Math.max(0, Number(document.getElementById('camp-spent').value) || 0);
+            const revenue = Math.max(0, Number(document.getElementById('camp-revenue').value) || 0);
+            const channel = document.getElementById('camp-channel').value;
             const status = document.getElementById('camp-status').value;
 
             if (id) {
                 const idx = state.campaigns.findIndex(c => c.id === id);
                 if (idx !== -1) {
-                    state.campaigns[idx] = { ...state.campaigns[idx], name, client, budget, spent, status };
+                    state.campaigns[idx] = { ...state.campaigns[idx], name, client, budget, spent, revenue, channel, status };
                     showToast(`Campaign updated & saved!`, 'success');
                 }
             } else {
-                state.campaigns.unshift({ id: 'CMP-' + Math.floor(100 + Math.random() * 900), name, client, budget, spent, status });
+                state.campaigns.unshift({ id: 'CMP-' + Math.floor(100 + Math.random() * 900), name, client, budget, spent, revenue, channel, status });
                 showToast(`Campaign created & saved!`, 'success');
             }
 
             saveStorage();
             closeCampaignModal();
             renderCampaignsGrid();
-            updateCharts();
+            renderRevenueGrowth();
         }
 
         function deleteCampaign(id) {
@@ -3523,7 +3624,7 @@
             state.campaigns = state.campaigns.filter(c => c.id !== id);
             saveStorage();
             renderCampaignsGrid();
-            updateCharts();
+            renderRevenueGrowth();
             showToast('Campaign deleted', 'info');
         }
 
@@ -4047,13 +4148,140 @@
             overlay.classList.remove('hidden');
         }
 
+        function formatRevenueAmount(amount) {
+            return `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
+
+        function getCampaignPerformance() {
+            return state.campaigns.map(campaign => {
+                const spend = Number(campaign.spent);
+                const revenue = Number(campaign.revenue);
+                const budget = Number(campaign.budget);
+                const safeSpend = Number.isFinite(spend) && spend > 0 ? spend : 0;
+                const safeRevenue = Number.isFinite(revenue) && revenue > 0 ? revenue : 0;
+                const safeBudget = Number.isFinite(budget) && budget > 0 ? budget : 0;
+                return {
+                    ...campaign,
+                    spend: safeSpend,
+                    revenue: safeRevenue,
+                    budget: safeBudget,
+                    remaining: Math.max(0, safeBudget - safeSpend),
+                    roas: safeSpend > 0 ? safeRevenue / safeSpend : null
+                };
+            });
+        }
+
+        function getMonthlyIncome(year, month, throughDay = 31) {
+            const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
+            return state.transactions.reduce((total, transaction) => {
+                const date = transactionDateKey(transaction.date);
+                if (transaction.type !== 'income' || date.slice(0, 7) !== monthKey || Number(date.slice(8, 10)) > throughDay) {
+                    return total;
+                }
+                const amount = Number(transaction.amount);
+                return Number.isFinite(amount) && amount > 0 ? total + amount : total;
+            }, 0);
+        }
+
+        function renderRevenueGrowth() {
+            const now = new Date();
+            const currentRevenue = getMonthlyIncome(now.getFullYear(), now.getMonth(), now.getDate());
+            const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const previousThroughDay = Math.min(now.getDate(), new Date(previousMonth.getFullYear(), previousMonth.getMonth() + 1, 0).getDate());
+            const previousRevenue = getMonthlyIncome(previousMonth.getFullYear(), previousMonth.getMonth(), previousThroughDay);
+            const currentLabel = `${now.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} · month to date`;
+            const previousLabel = previousMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+            const performance = getCampaignPerformance();
+            const campaignSpend = performance.reduce((total, campaign) => total + campaign.spend, 0);
+            const campaignRevenue = performance.reduce((total, campaign) => total + campaign.revenue, 0);
+            const campaignBudgetRemaining = performance.reduce((total, campaign) => total + campaign.remaining, 0);
+            const revenueDisplay = document.getElementById('growth-current-revenue');
+            const periodDisplay = document.getElementById('growth-current-period');
+            const changeDisplay = document.getElementById('growth-revenue-change');
+            const previousDisplay = document.getElementById('growth-previous-revenue');
+
+            revenueDisplay.textContent = formatRevenueAmount(currentRevenue);
+            periodDisplay.textContent = currentLabel;
+            previousDisplay.textContent = `vs ${previousLabel} through day ${previousThroughDay}: ${formatRevenueAmount(previousRevenue)}`;
+            changeDisplay.classList.remove('text-emerald-400', 'text-red-400', 'text-white');
+
+            if (previousRevenue > 0) {
+                const changePercent = ((currentRevenue - previousRevenue) / previousRevenue) * 100;
+                changeDisplay.textContent = `${changePercent > 0 ? '+' : ''}${changePercent.toFixed(1)}%`;
+                changeDisplay.classList.add(changePercent >= 0 ? 'text-emerald-400' : 'text-red-400');
+            } else if (currentRevenue > 0) {
+                changeDisplay.textContent = 'New revenue';
+                changeDisplay.classList.add('text-emerald-400');
+            } else {
+                changeDisplay.textContent = '—';
+                changeDisplay.classList.add('text-white');
+            }
+
+            document.getElementById('growth-campaign-spend').textContent = formatRevenueAmount(campaignSpend);
+            document.getElementById('growth-campaign-count').textContent =
+                `${performance.length} campaign${performance.length === 1 ? '' : 's'} tracked`;
+            document.getElementById('growth-campaign-revenue').textContent = formatRevenueAmount(campaignRevenue);
+            document.getElementById('growth-budget-remaining').textContent =
+                `Budget remaining: ${formatRevenueAmount(campaignBudgetRemaining)}`;
+            document.getElementById('growth-blended-roas').textContent =
+                campaignSpend > 0 ? `${(campaignRevenue / campaignSpend).toFixed(2)}x` : '—';
+
+            const tbody = document.getElementById('growth-campaign-table');
+            tbody.innerHTML = performance.length ? performance.map(campaign => `
+                <tr class="hover:bg-slate-800/40">
+                    <td class="px-3 py-3"><span class="font-semibold text-white">${campaign.name}</span><span class="mt-0.5 block text-[10px] text-slate-500">${campaign.client}</span></td>
+                    <td class="px-3 py-3 text-slate-300">${campaign.channel || 'Not set'}</td>
+                    <td class="px-3 py-3 text-slate-400">${campaign.status || 'Unspecified'}</td>
+                    <td class="px-3 py-3 text-right font-mono text-amber-300">${formatRevenueAmount(campaign.spend)}</td>
+                    <td class="px-3 py-3 text-right font-mono text-emerald-300">${formatRevenueAmount(campaign.revenue)}</td>
+                    <td class="px-3 py-3 text-right font-mono font-bold text-white">${campaign.roas === null ? '—' : `${campaign.roas.toFixed(2)}x`}</td>
+                </tr>
+            `).join('') : `
+                <tr><td colspan="6" class="px-3 py-8 text-center text-slate-500">No campaigns yet. Create a campaign and record its actual spend and generated revenue to see performance here.</td></tr>
+            `;
+
+            if (revenueGrowthChartInstance) {
+                const months = Array.from({ length: 12 }, (_, index) =>
+                    new Date(now.getFullYear(), now.getMonth() - 11 + index, 1));
+                revenueGrowthChartInstance.data.labels = months.map(month =>
+                    month.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }));
+                revenueGrowthChartInstance.data.datasets[0].data =
+                    months.map(month => getMonthlyIncome(
+                        month.getFullYear(),
+                        month.getMonth(),
+                        month.getFullYear() === now.getFullYear() && month.getMonth() === now.getMonth() ? now.getDate() : 31
+                    ));
+                revenueGrowthChartInstance.data.datasets[1].data = months.map(month => {
+                    const monthKey = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`;
+                    return state.transactions.reduce((total, transaction) => {
+                        if (transaction.type !== 'expense' || transactionDateKey(transaction.date).slice(0, 7) !== monthKey) {
+                            return total;
+                        }
+                        const amount = Number(transaction.amount);
+                        return Number.isFinite(amount) && amount > 0 ? total + amount : total;
+                    }, 0);
+                });
+                revenueGrowthChartInstance.update();
+            }
+
+            if (campaignPerformanceChartInstance) {
+                campaignPerformanceChartInstance.data.labels = performance.map(campaign => campaign.name);
+                campaignPerformanceChartInstance.data.datasets[0].data = performance.map(campaign => campaign.spend);
+                campaignPerformanceChartInstance.data.datasets[1].data = performance.map(campaign => campaign.revenue);
+                campaignPerformanceChartInstance.update();
+            }
+        }
+
         function calculateROAS() {
-            const spend = parseFloat(document.getElementById('roas-spend').value) || 0;
-            const rev = parseFloat(document.getElementById('roas-revenue').value) || 0;
-            const ratio = spend > 0 ? (rev / spend).toFixed(2) : '0.00';
-            const profit = rev - spend;
-            document.getElementById('roas-result-ratio').innerText = `${ratio}x`;
-            document.getElementById('roas-result-profit').innerText = `$${profit.toLocaleString('en-US', {minimumFractionDigits:2})}`;
+            const spend = Math.max(0, Number(document.getElementById('roas-spend').value) || 0);
+            const revenue = Math.max(0, Number(document.getElementById('roas-revenue').value) || 0);
+            const ratioDisplay = document.getElementById('roas-result-ratio');
+            const returnDisplay = document.getElementById('roas-result-profit');
+            const netReturn = revenue - spend;
+            ratioDisplay.textContent = spend > 0 ? `${(revenue / spend).toFixed(2)}x` : '—';
+            returnDisplay.textContent = formatRevenueAmount(netReturn);
+            returnDisplay.classList.remove('text-emerald-400', 'text-red-400', 'text-white');
+            returnDisplay.classList.add(netReturn > 0 ? 'text-emerald-400' : netReturn < 0 ? 'text-red-400' : 'text-white');
         }
 
         // Live Charts
@@ -4081,14 +4309,47 @@
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94A3B8' } } } }
             });
 
-            const ctx3 = document.getElementById('channelAnalyticsChart').getContext('2d');
-            channelChartInstance = new Chart(ctx3, {
-                type: 'pie',
+            const growthCtx = document.getElementById('revenueGrowthChart').getContext('2d');
+            revenueGrowthChartInstance = new Chart(growthCtx, {
+                type: 'line',
                 data: {
                     labels: [],
-                    datasets: [{ data: [], backgroundColor: ['#0284c7', '#E53E3E', '#10B981'] }]
+                    datasets: [
+                        { label: 'Revenue ($)', data: [], borderColor: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', fill: true, tension: 0.3 },
+                        { label: 'Expenses ($)', data: [], borderColor: '#EF4444', backgroundColor: 'rgba(239, 68, 68, 0.08)', fill: true, tension: 0.3 }
+                    ]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#94A3B8' } } } }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
+                    scales: {
+                        x: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(148, 163, 184, 0.08)' } },
+                        y: { beginAtZero: true, ticks: { color: '#94A3B8' }, grid: { color: 'rgba(148, 163, 184, 0.08)' } }
+                    },
+                    plugins: { legend: { labels: { color: '#94A3B8' } } }
+                }
+            });
+
+            const ctx3 = document.getElementById('campaignPerformanceChart').getContext('2d');
+            campaignPerformanceChartInstance = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'Ad spend ($)', data: [], backgroundColor: '#F59E0B' },
+                        { label: 'Tracked revenue ($)', data: [], backgroundColor: '#10B981' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { ticks: { color: '#94A3B8' }, grid: { color: 'rgba(148, 163, 184, 0.08)' } },
+                        y: { beginAtZero: true, ticks: { color: '#94A3B8' }, grid: { color: 'rgba(148, 163, 184, 0.08)' } }
+                    },
+                    plugins: { legend: { labels: { color: '#94A3B8' } } }
+                }
             });
         }
 
@@ -4131,11 +4392,6 @@
                 expenseChartInstance.update();
             }
 
-            if (channelChartInstance) {
-                channelChartInstance.data.labels = state.campaigns.map(campaign => campaign.name);
-                channelChartInstance.data.datasets[0].data = state.campaigns.map(campaign => Number(campaign.spent) || 0);
-                channelChartInstance.update();
-            }
         }
 
         function showToast(message, type = 'success') {
