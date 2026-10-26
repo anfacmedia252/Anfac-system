@@ -373,6 +373,32 @@
                 </div>
             </div>
 
+            <section class="glass-panel flex flex-col gap-4 rounded-2xl border border-anfac-border p-4 sm:flex-row sm:items-end sm:justify-between" aria-label="Financial dashboard date filters">
+                <div class="space-y-3">
+                    <div>
+                        <h3 class="text-xs font-bold text-white">Financial overview</h3>
+                        <p id="dashboard-period-summary" class="mt-1 text-[11px] text-slate-400">All recorded transactions</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2" role="group" aria-label="Choose financial date range">
+                        <button type="button" onclick="setDashboardPeriod('all')" id="dashboard-period-all" class="dashboard-period-button rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-bold text-white">All time</button>
+                        <button type="button" onclick="setDashboardPeriod('month')" id="dashboard-period-month" class="dashboard-period-button rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-400 hover:text-white">This month</button>
+                        <button type="button" onclick="setDashboardPeriod('year')" id="dashboard-period-year" class="dashboard-period-button rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-400 hover:text-white">This year</button>
+                        <button type="button" onclick="setDashboardPeriod('custom')" id="dashboard-period-custom" class="dashboard-period-button rounded-lg bg-slate-800 px-3 py-1.5 text-[11px] font-bold text-slate-400 hover:text-white">Custom range</button>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-end gap-3">
+                    <label class="flex flex-col gap-1 text-[10px] font-semibold text-slate-400">
+                        From
+                        <input type="date" id="dashboard-date-from" onchange="setDashboardCustomRange()" class="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500">
+                    </label>
+                    <label class="flex flex-col gap-1 text-[10px] font-semibold text-slate-400">
+                        To
+                        <input type="date" id="dashboard-date-to" onchange="setDashboardCustomRange()" class="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-2 text-xs text-white outline-none focus:border-blue-500">
+                    </label>
+                    <span id="dashboard-transaction-count" class="pb-2 text-[10px] text-slate-500">0 transactions</span>
+                </div>
+            </section>
+
             <!-- KPI Metric Cards Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div class="glass-panel p-4 rounded-2xl border border-anfac-border">
@@ -409,7 +435,7 @@
                         </div>
                     </div>
                     <div id="kpi-net-profit" class="text-xl font-black text-white">$0.00</div>
-                    <span class="text-[10px] text-slate-400 font-medium mt-1 inline-block">Income minus Expense</span>
+                    <span id="kpi-financial-status" class="text-[10px] text-slate-400 font-medium mt-1 inline-block">Income minus expenses</span>
                 </div>
 
                 <div class="glass-panel p-4 rounded-2xl border border-anfac-border">
@@ -1712,6 +1738,9 @@
         let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         let selectedCalendarDate = '';
         let calendarFilterDate = null;
+        let dashboardPeriod = 'all';
+        let dashboardStartDate = '';
+        let dashboardEndDate = '';
         let revenueChartInstance = null;
         let expenseChartInstance = null;
         let channelChartInstance = null;
@@ -2374,40 +2403,149 @@
             updateCharts();
         }
 
-        function recalculateMetrics() {
-            let totalIncome = 0;
-            let totalExpense = 0;
-            let cashInCount = 0;
-            let cashOutCount = 0;
+        function transactionDateKey(value) {
+            const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+            if (!match) return '';
+            const [, year, month, day] = match;
+            const date = new Date(Number(year), Number(month) - 1, Number(day));
+            if (date.getFullYear() !== Number(year) || date.getMonth() !== Number(month) - 1 || date.getDate() !== Number(day)) return '';
+            return `${year}-${month}-${day}`;
+        }
 
-            state.transactions.forEach(t => {
-                const amt = parseFloat(t.amount) || 0;
-                if (t.type === 'income') {
-                    totalIncome += amt;
-                    cashInCount++;
-                } else {
-                    totalExpense += amt;
-                    cashOutCount++;
-                }
+        function getDashboardTransactions() {
+            return state.transactions.filter(transaction => {
+                if (transaction.type !== 'income' && transaction.type !== 'expense') return false;
+                if (!dashboardStartDate && !dashboardEndDate) return true;
+                const date = transactionDateKey(transaction.date);
+                if (!date) return false;
+                return (!dashboardStartDate || date >= dashboardStartDate) &&
+                    (!dashboardEndDate || date <= dashboardEndDate);
+            });
+        }
+
+        function setDashboardPeriod(period) {
+            const today = getLocalDateKey(new Date());
+            const now = new Date();
+            dashboardPeriod = period;
+
+            if (period === 'month') {
+                dashboardStartDate = getLocalDateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+                dashboardEndDate = today;
+            } else if (period === 'year') {
+                dashboardStartDate = `${now.getFullYear()}-01-01`;
+                dashboardEndDate = today;
+            } else if (period === 'custom') {
+                dashboardStartDate = document.getElementById('dashboard-date-from').value ||
+                    getLocalDateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+                dashboardEndDate = document.getElementById('dashboard-date-to').value || today;
+            } else {
+                dashboardPeriod = 'all';
+                dashboardStartDate = '';
+                dashboardEndDate = '';
+            }
+
+            document.getElementById('dashboard-date-from').value = dashboardStartDate;
+            document.getElementById('dashboard-date-to').value = dashboardEndDate;
+            renderAllViews();
+        }
+
+        function setDashboardCustomRange() {
+            dashboardPeriod = 'custom';
+            dashboardStartDate = document.getElementById('dashboard-date-from').value;
+            dashboardEndDate = document.getElementById('dashboard-date-to').value;
+            renderAllViews();
+        }
+
+        function updateDashboardPeriodDisplay(transactionCount) {
+            const summary = document.getElementById('dashboard-period-summary');
+            const count = document.getElementById('dashboard-transaction-count');
+            const buttons = {
+                all: document.getElementById('dashboard-period-all'),
+                month: document.getElementById('dashboard-period-month'),
+                year: document.getElementById('dashboard-period-year'),
+                custom: document.getElementById('dashboard-period-custom')
+            };
+            const activeClasses = ['bg-blue-600', 'text-white'];
+            const inactiveClasses = ['bg-slate-800', 'text-slate-400'];
+
+            Object.entries(buttons).forEach(([period, button]) => {
+                if (!button) return;
+                button.classList.remove(...(period === dashboardPeriod ? inactiveClasses : activeClasses));
+                button.classList.add(...(period === dashboardPeriod ? activeClasses : inactiveClasses));
             });
 
-            const netProfit = totalIncome - totalExpense;
+            if (summary) {
+                if (dashboardStartDate && dashboardEndDate && dashboardStartDate > dashboardEndDate) {
+                    summary.textContent = 'Invalid range: start date must be on or before end date.';
+                    summary.classList.add('text-red-400');
+                } else {
+                    summary.classList.remove('text-red-400');
+                    if (!dashboardStartDate && !dashboardEndDate) {
+                        summary.textContent = 'All recorded transactions';
+                    } else if (dashboardStartDate && dashboardEndDate) {
+                        summary.textContent = `${dashboardStartDate} to ${dashboardEndDate}`;
+                    } else if (dashboardStartDate) {
+                        summary.textContent = `From ${dashboardStartDate} onward`;
+                    } else {
+                        summary.textContent = `Through ${dashboardEndDate}`;
+                    }
+                }
+            }
 
-            document.getElementById('kpi-total-income').innerText = `$${totalIncome.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            document.getElementById('kpi-total-expenses').innerText = `$${totalExpense.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            document.getElementById('kpi-net-profit').innerText = `$${netProfit.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            document.getElementById('kpi-cash-in').innerText = `$${totalIncome.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-            document.getElementById('kpi-cash-out').innerText = `$${totalExpense.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            if (count) {
+                count.textContent = `${transactionCount} transaction${transactionCount === 1 ? '' : 's'}`;
+            }
+        }
 
-            document.getElementById('kpi-cash-in-count').innerText = `${cashInCount} Transactions`;
-            document.getElementById('kpi-cash-out-count').innerText = `${cashOutCount} Transactions`;
+        function recalculateMetrics() {
+            const transactions = getDashboardTransactions();
+            const totals = transactions.reduce((result, transaction) => {
+                const amount = Number(transaction.amount);
+                if (!Number.isFinite(amount) || amount < 0) return result;
+                if (transaction.type === 'income') {
+                    result.income += amount;
+                    result.incomeCount++;
+                } else {
+                    result.expense += amount;
+                    result.expenseCount++;
+                }
+                return result;
+            }, { income: 0, expense: 0, incomeCount: 0, expenseCount: 0 });
+
+            const netProfit = totals.income - totals.expense;
+            const formatAmount = amount => `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('kpi-total-income').innerText = formatAmount(totals.income);
+            document.getElementById('kpi-total-expenses').innerText = formatAmount(totals.expense);
+            document.getElementById('kpi-net-profit').innerText = formatAmount(netProfit);
+            document.getElementById('kpi-cash-in').innerText = formatAmount(totals.income);
+            document.getElementById('kpi-cash-out').innerText = formatAmount(totals.expense);
+            document.getElementById('kpi-cash-in-count').innerText = `${totals.incomeCount} transaction${totals.incomeCount === 1 ? '' : 's'}`;
+            document.getElementById('kpi-cash-out-count').innerText = `${totals.expenseCount} transaction${totals.expenseCount === 1 ? '' : 's'}`;
+
+            const profitDisplay = document.getElementById('kpi-net-profit');
+            const statusDisplay = document.getElementById('kpi-financial-status');
+            profitDisplay.classList.remove('text-red-400', 'text-emerald-400', 'text-white');
+            profitDisplay.classList.add(netProfit < 0 ? 'text-red-400' : netProfit > 0 ? 'text-emerald-400' : 'text-white');
+            statusDisplay.classList.remove('text-red-400', 'text-emerald-400', 'text-slate-400');
+            statusDisplay.classList.add(netProfit < 0 ? 'text-red-400' : 'text-emerald-400');
+            statusDisplay.textContent = netProfit < 0
+                ? 'Expenses exceed income'
+                : netProfit > 0
+                    ? 'Positive net balance'
+                    : 'Income equals expenses';
+
+            updateDashboardPeriodDisplay(transactions.length);
         }
 
         function renderDashboardTable() {
             const tbody = document.getElementById('dashboard-transactions-table');
             if (!tbody) return;
 
-            tbody.innerHTML = state.transactions.slice(0, 5).map(t => `
+            const recentTransactions = getDashboardTransactions()
+                .slice()
+                .sort((first, second) => transactionDateKey(second.date).localeCompare(transactionDateKey(first.date)))
+                .slice(0, 5);
+            tbody.innerHTML = recentTransactions.length ? recentTransactions.map(t => `
                 <tr class="hover:bg-slate-800/40 transition">
                     <td class="py-3 px-4 font-mono text-slate-400">${t.date}</td>
                     <td class="py-3 px-4">
@@ -2430,7 +2568,11 @@
                         </button>
                     </td>
                 </tr>
-            `).join('');
+            `).join('') : `
+                <tr>
+                    <td colspan="7" class="py-8 px-4 text-center text-slate-500">No income or expense transactions in this date range.</td>
+                </tr>
+            `;
         }
 
         function renderFinanceTable(filterType = 'all') {
@@ -3304,7 +3446,7 @@
                 }
             } else {
                 const newId = 'TR-' + Math.floor(100 + Math.random() * 900);
-                state.transactions.unshift({ id: newId, date: new Date().toISOString().split('T')[0], type, title, amount, category, method });
+                state.transactions.unshift({ id: newId, date: getLocalDateKey(new Date()), type, title, amount, category, method });
                 showToast(`New transaction logged & saved! ($${amount})`, 'success');
             }
 
@@ -3952,14 +4094,14 @@
 
         function updateCharts() {
             const monthlyTotals = new Map();
-            state.transactions.forEach(transaction => {
-                const date = new Date(`${transaction.date}T00:00:00`);
-                if (Number.isNaN(date.getTime())) return;
-                const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const transactions = getDashboardTransactions();
+            transactions.forEach(transaction => {
+                const dateKey = transactionDateKey(transaction.date);
+                const amount = Number(transaction.amount);
+                if (!dateKey || !Number.isFinite(amount) || amount < 0) return;
+                const month = dateKey.slice(0, 7);
                 const totals = monthlyTotals.get(month) || { income: 0, expense: 0 };
-                if (transaction.type === 'income' || transaction.type === 'expense') {
-                    totals[transaction.type] += Number(transaction.amount) || 0;
-                }
+                totals[transaction.type] += amount;
                 monthlyTotals.set(month, totals);
             });
 
@@ -3975,11 +4117,13 @@
             }
 
             const expenseTotals = new Map();
-            state.transactions
+            transactions
                 .filter(transaction => transaction.type === 'expense')
                 .forEach(transaction => {
                     const category = transaction.category || 'Uncategorized';
-                    expenseTotals.set(category, (expenseTotals.get(category) || 0) + (Number(transaction.amount) || 0));
+                    const amount = Number(transaction.amount);
+                    if (!Number.isFinite(amount) || amount < 0) return;
+                    expenseTotals.set(category, (expenseTotals.get(category) || 0) + amount);
                 });
             if (expenseChartInstance) {
                 expenseChartInstance.data.labels = [...expenseTotals.keys()];
