@@ -48,10 +48,10 @@ function clearSessionCookie(response) {
   response.setHeader('Set-Cookie', `anfac_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${secure}`);
 }
 
-async function getAuthenticatedUser(request, response) {
+async function getAuthenticatedUser(request, response, required = true) {
   const token = cookieValue(request, 'anfac_session');
   if (!token) {
-    response.status(401).json({ error: 'Sign in is required.' });
+    if (required) response.status(401).json({ error: 'Sign in is required.' });
     return null;
   }
   const result = await getPool().query(`
@@ -64,7 +64,9 @@ async function getAuthenticatedUser(request, response) {
   const session = result.rows[0];
   if (!session) {
     clearSessionCookie(response);
-    response.status(401).json({ error: 'Your session has expired. Please sign in again.' });
+    if (required) {
+      response.status(401).json({ error: 'Your session has expired. Please sign in again.' });
+    }
     return null;
   }
   return {
@@ -252,8 +254,8 @@ app.post('/api/auth/logout', asyncRoute(async (request, response) => {
 }));
 
 app.get('/api/auth/session', asyncRoute(async (request, response) => {
-  const user = await getAuthenticatedUser(request, response);
-  if (user) response.json({ user });
+  const user = await getAuthenticatedUser(request, response, false);
+  response.json({ user });
 }));
 
 app.put('/api/client/profile', roleRoute('client', async (request, response) => {
