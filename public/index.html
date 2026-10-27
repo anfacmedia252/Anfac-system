@@ -2634,7 +2634,10 @@
             if (state.currentUser?.role === 'client') {
                 document.getElementById('nav-user-fullname').innerText = state.currentUser.displayName || state.currentUser.username;
                 document.getElementById('nav-user-role').innerText = 'Client';
-                document.getElementById('nav-avatar-img').src = DEFAULT_COMPANY_LOGO;
+                const clientLogo = state.clientProfile?.logo;
+                document.getElementById('nav-avatar-img').src = isSafeCampaignAdImage(clientLogo)
+                    ? clientLogo
+                    : DEFAULT_COMPANY_LOGO;
                 return;
             }
             if (!state.profile) return;
