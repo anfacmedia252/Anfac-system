@@ -617,7 +617,7 @@
                         </select>
                     </label>
                     <label class="text-[10px] font-semibold text-slate-400">Client sign-in username
-                        <input id="client-account-create-username" type="text" required minlength="3" maxlength="100" pattern="[A-Za-z0-9._-]+" autocomplete="off" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white" placeholder="client.username">
+                        <input id="client-account-create-username" type="text" required minlength="3" maxlength="100" pattern="[A-Za-z0-9._\x2d]+" autocomplete="off" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white" placeholder="client.username">
                     </label>
                     <label class="text-[10px] font-semibold text-slate-400">Client email
                         <input id="client-account-create-email" type="email" required maxlength="254" autocomplete="off" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white" placeholder="client@example.com">
@@ -1257,8 +1257,73 @@
         </div>
 
         <!-- VIEW: CLIENT SELF-SERVICE PORTAL -->
-        <div id="view-client-portal" class="content-view hidden space-y-6 p-4 sm:p-6 lg:p-8">
-            <section id="client-ad-slider" class="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-slate-950 shadow-xl" aria-label="Your campaign ads" aria-roledescription="carousel" onmouseenter="pauseClientAdRotation()" onmouseleave="resumeClientAdRotation()" onfocusin="pauseClientAdRotation()" onfocusout="resumeClientAdRotation()">
+        <div id="view-client-portal" class="content-view hidden space-y-7 p-4 sm:p-6 lg:p-8">
+            <section class="relative overflow-hidden rounded-3xl border border-sky-400/15 bg-gradient-to-br from-slate-900 via-[#101d32] to-[#10172a] p-6 shadow-2xl shadow-sky-950/20 sm:p-8">
+                <div class="pointer-events-none absolute -right-20 -top-32 h-72 w-72 rounded-full bg-sky-500/10 blur-3xl"></div>
+                <div class="pointer-events-none absolute -bottom-36 left-1/3 h-64 w-64 rounded-full bg-blue-500/10 blur-3xl"></div>
+                <div class="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex min-w-0 items-center gap-4">
+                        <div class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-slate-950/70 shadow-lg">
+                            <img id="client-portal-logo" alt="" class="hidden h-full w-full object-contain p-1">
+                            <span id="client-portal-avatar" class="text-xl font-black text-sky-300">A</span>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="rounded-full border border-sky-400/20 bg-sky-400/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-sky-200">Client workspace</span>
+                                <span class="inline-flex items-center gap-1.5 text-[10px] font-medium text-emerald-300"><span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span> Account active</span>
+                            </div>
+                            <h2 id="client-portal-heading" class="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">Welcome</h2>
+                            <p class="mt-1 text-xs text-slate-400">Your projects, campaigns, bookings and support — all in one place.</p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-2.5">
+                            <span class="block text-[9px] font-bold uppercase tracking-wider text-slate-500">Signed in as</span>
+                            <span id="client-portal-username" class="mt-1 block text-xs font-bold text-slate-200"></span>
+                        </div>
+                        <button type="button" onclick="focusClientPortalField('client-booking-title')" class="inline-flex items-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-xs font-bold text-slate-950 shadow-lg shadow-sky-950/30 transition hover:bg-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-300">
+                            <i class="fa-solid fa-calendar-plus" aria-hidden="true"></i> Book a session
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Client workspace summary">
+                <article class="group rounded-2xl border border-white/[0.07] bg-gradient-to-br from-slate-900 to-slate-900/60 p-4 transition hover:border-violet-400/20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-semibold text-slate-400">Active projects</span>
+                        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></span>
+                    </div>
+                    <p id="client-summary-projects" class="mt-3 text-2xl font-black text-white">0</p>
+                    <p class="mt-1 text-[9px] text-slate-500">Your work in progress</p>
+                </article>
+                <article class="group rounded-2xl border border-white/[0.07] bg-gradient-to-br from-slate-900 to-slate-900/60 p-4 transition hover:border-sky-400/20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-semibold text-slate-400">Live campaigns</span>
+                        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i></span>
+                    </div>
+                    <p id="client-summary-campaigns" class="mt-3 text-2xl font-black text-white">0</p>
+                    <p class="mt-1 text-[9px] text-slate-500">Campaigns in progress</p>
+                </article>
+                <article class="group rounded-2xl border border-white/[0.07] bg-gradient-to-br from-slate-900 to-slate-900/60 p-4 transition hover:border-amber-400/20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-semibold text-slate-400">Pending bookings</span>
+                        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-400/10 text-amber-300"><i class="fa-regular fa-clock" aria-hidden="true"></i></span>
+                    </div>
+                    <p id="client-summary-bookings" class="mt-3 text-2xl font-black text-white">0</p>
+                    <p class="mt-1 text-[9px] text-slate-500">Awaiting confirmation</p>
+                </article>
+                <article class="group rounded-2xl border border-white/[0.07] bg-gradient-to-br from-slate-900 to-slate-900/60 p-4 transition hover:border-emerald-400/20">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-semibold text-slate-400">Open requests</span>
+                        <span class="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><i class="fa-regular fa-comments" aria-hidden="true"></i></span>
+                    </div>
+                    <p id="client-summary-requests" class="mt-3 text-2xl font-black text-white">0</p>
+                    <p class="mt-1 text-[9px] text-slate-500">Being handled by your team</p>
+                </article>
+            </section>
+
+            <section id="client-ad-slider" class="relative overflow-hidden rounded-3xl border border-sky-400/15 bg-slate-950 shadow-xl" aria-label="Your campaign ads" aria-roledescription="carousel" onmouseenter="pauseClientAdRotation()" onmouseleave="resumeClientAdRotation()" onfocusin="pauseClientAdRotation()" onfocusout="resumeClientAdRotation()">
                 <div id="client-ad-slider-empty" class="flex min-h-48 items-center justify-center bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900 px-6 py-10 text-center">
                     <div>
                         <span class="text-2xl text-sky-400"><i class="fa-solid fa-rectangle-ad"></i></span>
@@ -1286,86 +1351,108 @@
                 </div>
             </section>
 
-            <section class="glass-panel flex flex-col gap-5 rounded-2xl border border-sky-500/20 bg-gradient-to-r from-slate-900 via-sky-950/30 to-slate-900 p-6 sm:flex-row sm:items-center">
-                <img id="client-portal-logo" alt="" class="hidden h-16 w-16 rounded-xl border border-slate-700 bg-white object-contain p-1">
-                <div class="min-w-0 flex-1">
-                    <span class="rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-300">Client portal</span>
-                    <h2 id="client-portal-heading" class="mt-2 text-2xl font-extrabold text-white">Welcome</h2>
-                    <p class="mt-1 text-xs text-slate-400">View your project progress, campaign updates, bookings, and service requests.</p>
-                </div>
-                <div class="rounded-xl border border-slate-800 bg-slate-950/50 px-4 py-3 text-center">
-                    <span class="block text-[10px] font-bold uppercase text-slate-500">Account</span>
-                    <span id="client-portal-username" class="mt-1 block text-sm font-bold text-slate-200"></span>
-                </div>
+            <section class="grid grid-cols-1 gap-5 2xl:grid-cols-[1.15fr_0.85fr]">
+                <article class="glass-panel overflow-hidden rounded-3xl border border-white/[0.07]">
+                    <div class="flex items-center justify-between border-b border-white/[0.06] px-5 py-4 sm:px-6">
+                        <div class="flex items-center gap-3">
+                            <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-400/10 text-violet-300"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></span>
+                            <div>
+                                <h3 class="text-sm font-bold text-white">Projects & campaigns</h3>
+                                <p class="mt-1 text-[10px] text-slate-500">Your latest work and campaign updates</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-5 p-5 sm:p-6">
+                        <div id="client-portal-projects" class="space-y-3"></div>
+                        <div class="border-t border-white/[0.06] pt-4">
+                            <h4 class="mb-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500">Campaign activity</h4>
+                            <div id="client-portal-campaigns" class="space-y-3"></div>
+                        </div>
+                    </div>
+                </article>
+
+                <article class="glass-panel overflow-hidden rounded-3xl border border-white/[0.07]">
+                    <div class="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4 sm:px-6">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-400/10 text-amber-300"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i></span>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Studio bookings</h3>
+                            <p class="mt-1 text-[10px] text-slate-500">Schedule a session and track confirmation</p>
+                        </div>
+                    </div>
+                    <div class="space-y-4 p-5 sm:p-6">
+                        <form id="client-booking-form" onsubmit="submitClientBooking(event)" class="space-y-3 rounded-2xl border border-white/[0.06] bg-slate-950/40 p-4">
+                            <label class="block text-[10px] font-semibold text-slate-400">Session or service
+                                <input id="client-booking-title" required maxlength="200" placeholder="e.g. Product photography session" class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10">
+                            </label>
+                            <label class="block text-[10px] font-semibold text-slate-400">Preferred date & time
+                                <input id="client-booking-datetime" type="datetime-local" required class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10">
+                            </label>
+                            <button type="submit" class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-2.5 text-xs font-bold text-slate-950 transition hover:bg-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-300">
+                                <i class="fa-solid fa-paper-plane" aria-hidden="true"></i> Request a booking
+                            </button>
+                        </form>
+                        <div id="client-portal-bookings" class="space-y-2"></div>
+                    </div>
+                </article>
             </section>
 
-            <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <article class="glass-panel space-y-4 rounded-2xl border border-anfac-border p-5">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">My projects & campaigns</h3>
-                        <p class="mt-1 text-[11px] text-slate-400">Progress and status for work linked to your client profile.</p>
+            <section class="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                <article class="glass-panel overflow-hidden rounded-3xl border border-white/[0.07]">
+                    <div class="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4 sm:px-6">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300"><i class="fa-regular fa-comments" aria-hidden="true"></i></span>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Your account team</h3>
+                            <p class="mt-1 text-[10px] text-slate-500">Send a message and follow its progress</p>
+                        </div>
                     </div>
-                    <div id="client-portal-projects" class="space-y-3"></div>
-                    <div id="client-portal-campaigns" class="space-y-3"></div>
-                </article>
-                <article class="glass-panel space-y-4 rounded-2xl border border-anfac-border p-5">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">My studio bookings</h3>
-                        <p class="mt-1 text-[11px] text-slate-400">Booking requests are pending until ANFAC Media confirms them.</p>
+                    <div class="space-y-4 p-5 sm:p-6">
+                        <form id="client-request-form" onsubmit="submitClientRequest(event)" class="space-y-3 rounded-2xl border border-white/[0.06] bg-slate-950/40 p-4">
+                            <label class="block text-[10px] font-semibold text-slate-400">What can we help with?
+                                <input id="client-request-subject" required maxlength="160" placeholder="e.g. Campaign update request" class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10">
+                            </label>
+                            <label class="block text-[10px] font-semibold text-slate-400">Message
+                                <textarea id="client-request-message" required maxlength="5000" rows="3" placeholder="Tell your account team a little more..." class="mt-1.5 w-full resize-y rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10"></textarea>
+                            </label>
+                            <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-2.5 text-xs font-bold text-sky-200 transition hover:bg-sky-400/20 focus:outline-none focus:ring-2 focus:ring-sky-300">
+                                <i class="fa-regular fa-paper-plane" aria-hidden="true"></i> Send message
+                            </button>
+                        </form>
+                        <div id="client-portal-requests" class="space-y-2"></div>
                     </div>
-                    <form id="client-booking-form" onsubmit="submitClientBooking(event)" class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <label class="text-[10px] font-semibold text-slate-400">Session or service
-                            <input id="client-booking-title" required maxlength="200" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-sky-500">
-                        </label>
-                        <label class="text-[10px] font-semibold text-slate-400">Requested date & time
-                            <input id="client-booking-datetime" type="datetime-local" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-sky-500">
-                        </label>
-                        <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-sky-500 sm:col-span-2">Request a booking</button>
-                    </form>
-                    <div id="client-portal-bookings" class="space-y-2"></div>
-                </article>
-            </section>
-
-            <section class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <article class="glass-panel space-y-4 rounded-2xl border border-anfac-border p-5">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">Contact your account team</h3>
-                        <p class="mt-1 text-[11px] text-slate-400">Send a service request or message and track its status.</p>
-                    </div>
-                    <form id="client-request-form" onsubmit="submitClientRequest(event)" class="space-y-3">
-                        <label class="block text-[10px] font-semibold text-slate-400">Subject
-                            <input id="client-request-subject" required maxlength="160" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-sky-500">
-                        </label>
-                        <label class="block text-[10px] font-semibold text-slate-400">Message
-                            <textarea id="client-request-message" required maxlength="5000" rows="3" class="mt-1 w-full resize-y rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-sky-500"></textarea>
-                        </label>
-                        <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-sky-500">Send request</button>
-                    </form>
-                    <div id="client-portal-requests" class="space-y-2"></div>
                 </article>
 
-                <article class="glass-panel space-y-4 rounded-2xl border border-anfac-border p-5">
-                    <div>
-                        <h3 class="text-sm font-bold text-white">Account profile & security</h3>
-                        <p class="mt-1 text-[11px] text-slate-400">Enter your current password to save profile changes. Leave the new password blank to keep it unchanged.</p>
+                <article class="glass-panel overflow-hidden rounded-3xl border border-white/[0.07]">
+                    <div class="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4 sm:px-6">
+                        <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-400/10 text-blue-300"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></span>
+                        <div>
+                            <h3 class="text-sm font-bold text-white">Profile & security</h3>
+                            <p class="mt-1 text-[10px] text-slate-500">Keep your contact details and password up to date</p>
+                        </div>
                     </div>
-                    <form id="client-profile-form" onsubmit="saveClientProfile(event)" class="space-y-3">
-                        <label class="block text-[10px] font-semibold text-slate-400">Display name
-                            <input id="client-profile-name" required maxlength="120" autocomplete="name" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-sky-500">
-                        </label>
-                        <label class="block text-[10px] font-semibold text-slate-400">Email
-                            <input id="client-profile-email" type="email" required maxlength="254" autocomplete="email" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-sky-500">
-                        </label>
+                    <form id="client-profile-form" onsubmit="saveClientProfile(event)" class="space-y-3 p-5 sm:p-6">
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <label class="block text-[10px] font-semibold text-slate-400">Display name
+                                <input id="client-profile-name" required maxlength="120" autocomplete="name" class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-950/70 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400">
+                            </label>
+                            <label class="block text-[10px] font-semibold text-slate-400">Email address
+                                <input id="client-profile-email" type="email" required maxlength="254" autocomplete="email" class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-950/70 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400">
+                            </label>
+                        </div>
                         <label class="block text-[10px] font-semibold text-slate-400">Username
-                            <input id="client-profile-username" required minlength="3" maxlength="100" pattern="[A-Za-z0-9._-]+" autocomplete="username" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-sky-500">
+                            <input id="client-profile-username" required minlength="3" maxlength="100" pattern="[A-Za-z0-9._\x2d]+" autocomplete="username" class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-950/70 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400">
                         </label>
-                        <label class="block text-[10px] font-semibold text-slate-400">Current password
-                            <input id="client-profile-current-password" type="password" required autocomplete="current-password" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-sky-500">
-                        </label>
-                        <label class="block text-[10px] font-semibold text-slate-400">New password (optional, at least 8 characters)
-                            <input id="client-profile-new-password" type="password" minlength="8" maxlength="256" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs text-white outline-none focus:border-sky-500">
-                        </label>
-                        <button type="submit" class="rounded-lg border border-slate-700 bg-slate-800 px-4 py-2 text-xs font-bold text-white transition hover:bg-slate-700">Save account settings</button>
+                        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <label class="block text-[10px] font-semibold text-slate-400">Current password
+                                <input id="client-profile-current-password" type="password" required autocomplete="current-password" class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-950/70 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400">
+                            </label>
+                            <label class="block text-[10px] font-semibold text-slate-400">New password <span class="font-normal text-slate-500">(optional)</span>
+                                <input id="client-profile-new-password" type="password" minlength="8" maxlength="256" autocomplete="new-password" placeholder="At least 8 characters" class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-950/70 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400">
+                            </label>
+                        </div>
+                        <p class="text-[9px] leading-relaxed text-slate-500">Your current password is required to save profile changes. Leave the new password blank to keep it unchanged.</p>
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-slate-800 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-300">
+                            <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Save account settings
+                        </button>
                     </form>
                 </article>
             </section>
@@ -2596,73 +2683,121 @@
             const profile = state.clientProfile;
             renderClientAdSlider();
             document.getElementById('client-portal-heading').textContent =
-                profile?.name ? `Welcome, ${profile.name}` : 'Your client portal';
+                profile?.name ? `Welcome back, ${profile.name}` : 'Welcome to your workspace';
             document.getElementById('client-portal-username').textContent = state.currentUser.username || '';
             document.getElementById('client-profile-name').value = state.currentUser.displayName || '';
             document.getElementById('client-profile-email').value = state.currentUser.email || '';
             document.getElementById('client-profile-username').value = state.currentUser.username || '';
 
+            const avatar = document.getElementById('client-portal-avatar');
+            const initials = String(profile?.name || state.currentUser.displayName || 'Client')
+                .trim()
+                .split(/\s+/)
+                .slice(0, 2)
+                .map(part => part.charAt(0).toUpperCase())
+                .join('');
+            avatar.textContent = initials;
             const logo = document.getElementById('client-portal-logo');
             if (profile?.logo && /^(https:\/\/|data:image\/(?:png|jpeg|webp|gif);base64,)/i.test(profile.logo)) {
                 logo.src = profile.logo;
                 logo.classList.remove('hidden');
+                avatar.classList.add('hidden');
             } else {
                 logo.removeAttribute('src');
                 logo.classList.add('hidden');
+                avatar.classList.remove('hidden');
             }
 
             const projects = Array.isArray(state.projects) ? state.projects : [];
+            const activeProjects = projects.filter(project =>
+                !['completed', 'complete'].includes(String(project.status || '').toLowerCase())
+            );
+            document.getElementById('client-summary-projects').textContent = activeProjects.length;
             document.getElementById('client-portal-projects').innerHTML = projects.length
                 ? projects.map(project => `
-                    <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
+                    <article class="rounded-2xl border border-white/[0.06] bg-gradient-to-r from-slate-900/90 to-slate-900/40 p-4 transition hover:border-violet-400/20">
                         <div class="flex flex-wrap items-start justify-between gap-2">
-                            <h4 class="text-xs font-bold text-white">${escapeHtml(project.title || 'Project')}</h4>
-                            <span class="rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-semibold text-purple-300">${escapeHtml(project.status || 'In progress')}</span>
+                            <div class="flex min-w-0 items-center gap-3">
+                                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-violet-400/10 text-violet-300"><i class="fa-solid fa-folder-open" aria-hidden="true"></i></span>
+                                <div class="min-w-0">
+                                    <h4 class="truncate text-xs font-bold text-white">${escapeHtml(project.title || 'Project')}</h4>
+                                    <p class="mt-1 text-[9px] text-slate-500">${escapeHtml(project.category || 'Project')}</p>
+                                </div>
+                            </div>
+                            <span class="rounded-full border border-violet-400/10 bg-violet-400/10 px-2.5 py-1 text-[9px] font-semibold text-violet-200">${escapeHtml(project.status || 'In progress')}</span>
                         </div>
-                        <p class="mt-2 text-[10px] text-slate-400">${escapeHtml(project.category || 'Project')} · Due ${escapeHtml(project.deadline || 'Not set')}</p>
+                        <div class="mt-4 flex items-center justify-between gap-3 text-[9px]">
+                            <span class="text-slate-500">Target date</span>
+                            <span class="font-medium text-slate-300">${escapeHtml(project.deadline || 'To be confirmed')}</span>
+                        </div>
                     </article>
                 `).join('')
-                : '<p class="text-xs text-slate-500">No projects are linked to your client profile yet.</p>';
+                : '<div class="rounded-2xl border border-dashed border-slate-700/80 px-4 py-6 text-center"><i class="fa-regular fa-folder-open text-lg text-slate-600" aria-hidden="true"></i><p class="mt-2 text-[10px] text-slate-500">New projects will appear here when your team links them to your account.</p></div>';
 
             const campaigns = Array.isArray(state.campaigns) ? state.campaigns : [];
+            const liveCampaigns = campaigns.filter(campaign =>
+                String(campaign.status || '').toLowerCase() !== 'completed'
+            );
+            document.getElementById('client-summary-campaigns').textContent = liveCampaigns.length;
             document.getElementById('client-portal-campaigns').innerHTML = campaigns.length
                 ? campaigns.map(campaign => `
-                    <article class="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-                        <div class="flex flex-wrap items-start justify-between gap-2">
-                            <h4 class="text-xs font-bold text-white">${escapeHtml(campaign.name || 'Campaign')}</h4>
-                            <span class="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold text-sky-300">${escapeHtml(campaign.status || 'In progress')}</span>
+                    <article class="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-slate-950/35 p-3">
+                        ${isSafeCampaignAdImage(campaign.adImage)
+                            ? `<img src="${campaign.adImage}" alt="" class="h-12 w-16 shrink-0 rounded-xl object-cover">`
+                            : '<span class="flex h-12 w-16 shrink-0 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><i class="fa-solid fa-bullhorn" aria-hidden="true"></i></span>'}
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h4 class="truncate text-xs font-bold text-white">${escapeHtml(campaign.name || 'Campaign')}</h4>
+                                <span class="rounded-full bg-sky-400/10 px-2 py-0.5 text-[8px] font-semibold text-sky-200">${escapeHtml(campaign.status || 'In progress')}</span>
+                            </div>
+                            <p class="mt-1 text-[9px] text-slate-500">${escapeHtml(campaign.channel || 'Campaign update')}</p>
                         </div>
-                        <p class="mt-2 text-[10px] text-slate-400">${escapeHtml(campaign.channel || 'Campaign update')}</p>
                     </article>
                 `).join('')
-                : '<p class="text-xs text-slate-500">No campaigns are linked to your client profile yet.</p>';
+                : '<p class="rounded-xl border border-dashed border-slate-700/80 px-3 py-4 text-center text-[10px] text-slate-500">Campaign updates will appear here.</p>';
 
             const bookings = Array.isArray(state.bookings) ? state.bookings : [];
+            const pendingBookings = bookings.filter(booking =>
+                String(booking.status || '').toLowerCase() !== 'confirmed'
+            );
+            document.getElementById('client-summary-bookings').textContent = pendingBookings.length;
             document.getElementById('client-portal-bookings').innerHTML = bookings.length
                 ? bookings.map(booking => `
-                    <article class="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-800 bg-slate-900/60 p-3">
-                        <div>
-                            <h4 class="text-xs font-semibold text-white">${escapeHtml(booking.title || 'Studio booking')}</h4>
-                            <p class="mt-1 text-[10px] text-slate-400">${escapeHtml(formatBookingDate(booking.datetime))} · ${escapeHtml(formatBookingTime(booking.datetime) || 'Time not set')}</p>
+                    <article class="flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-slate-950/35 p-3">
+                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${booking.status === 'Confirmed' ? 'bg-emerald-400/10 text-emerald-300' : 'bg-amber-400/10 text-amber-300'}"><i class="fa-regular fa-calendar-check" aria-hidden="true"></i></span>
+                        <div class="min-w-0 flex-1">
+                            <h4 class="truncate text-xs font-semibold text-white">${escapeHtml(booking.title || 'Studio booking')}</h4>
+                            <p class="mt-1 text-[9px] text-slate-500">${escapeHtml(formatBookingDate(booking.datetime))} · ${escapeHtml(formatBookingTime(booking.datetime) || 'Time not set')}</p>
                         </div>
-                        <span class="rounded-full ${booking.status === 'Confirmed' ? 'bg-emerald-500/10 text-emerald-300' : 'bg-amber-500/10 text-amber-300'} px-2 py-1 text-[10px] font-semibold">${escapeHtml(booking.status || 'Pending')}</span>
+                        <span class="shrink-0 rounded-full ${booking.status === 'Confirmed' ? 'bg-emerald-400/10 text-emerald-200' : 'bg-amber-400/10 text-amber-200'} px-2.5 py-1 text-[9px] font-semibold">${escapeHtml(booking.status || 'Pending')}</span>
                     </article>
                 `).join('')
-                : '<p class="text-xs text-slate-500">No bookings yet. Use the form above to request a session.</p>';
+                : '<p class="rounded-xl border border-dashed border-slate-700/80 px-3 py-4 text-center text-[10px] text-slate-500">Your booking requests and confirmations will appear here.</p>';
 
             const requests = Array.isArray(state.clientRequests) ? state.clientRequests : [];
+            const openRequests = requests.filter(request =>
+                !['completed', 'closed', 'resolved'].includes(String(request.status || '').toLowerCase())
+            );
+            document.getElementById('client-summary-requests').textContent = openRequests.length;
             document.getElementById('client-portal-requests').innerHTML = requests.length
                 ? requests.map(request => `
-                    <article class="rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+                    <article class="rounded-2xl border border-white/[0.06] bg-slate-950/35 p-4">
                         <div class="flex flex-wrap items-center justify-between gap-2">
-                            <h4 class="text-xs font-semibold text-white">${escapeHtml(request.subject)}</h4>
-                            <span class="rounded-full bg-slate-800 px-2 py-1 text-[10px] text-sky-300">${escapeHtml(request.status || 'New')}</span>
+                            <h4 class="text-xs font-semibold text-white">${escapeHtml(request.subject || 'Support request')}</h4>
+                            <span class="rounded-full bg-slate-800 px-2.5 py-1 text-[9px] font-semibold text-sky-200">${escapeHtml(request.status || 'New')}</span>
                         </div>
-                        <p class="mt-2 whitespace-pre-wrap text-[11px] leading-relaxed text-slate-300">${escapeHtml(request.message)}</p>
-                        <p class="mt-2 text-[10px] text-slate-500">${escapeHtml(new Date(request.createdAt).toLocaleString())}</p>
+                        <p class="mt-2 whitespace-pre-wrap text-[10px] leading-relaxed text-slate-300">${escapeHtml(request.message)}</p>
+                        <p class="mt-3 text-[9px] text-slate-500">${escapeHtml(new Date(request.createdAt).toLocaleString())}</p>
                     </article>
                 `).join('')
-                : '<p class="text-xs text-slate-500">Your service requests will appear here.</p>';
+                : '<p class="rounded-xl border border-dashed border-slate-700/80 px-3 py-4 text-center text-[10px] text-slate-500">Messages to your account team will appear here.</p>';
+        }
+
+        function focusClientPortalField(fieldId) {
+            const field = document.getElementById(fieldId);
+            if (!field) return;
+            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            field.focus({ preventScroll: true });
         }
 
         function isSafeCampaignAdImage(source) {
