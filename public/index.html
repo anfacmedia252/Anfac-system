@@ -1258,6 +1258,34 @@
 
         <!-- VIEW: CLIENT SELF-SERVICE PORTAL -->
         <div id="view-client-portal" class="content-view hidden space-y-6 p-4 sm:p-6 lg:p-8">
+            <section id="client-ad-slider" class="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-slate-950 shadow-xl" aria-label="Your campaign ads" aria-roledescription="carousel" onmouseenter="pauseClientAdRotation()" onmouseleave="resumeClientAdRotation()" onfocusin="pauseClientAdRotation()" onfocusout="resumeClientAdRotation()">
+                <div id="client-ad-slider-empty" class="flex min-h-48 items-center justify-center bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900 px-6 py-10 text-center">
+                    <div>
+                        <span class="text-2xl text-sky-400"><i class="fa-solid fa-rectangle-ad"></i></span>
+                        <h3 class="mt-2 text-sm font-bold text-white">Your campaign ads will appear here</h3>
+                        <p class="mt-1 text-xs text-slate-400">Your account team can add campaign artwork for this client profile.</p>
+                    </div>
+                </div>
+                <div id="client-ad-slider-content" class="relative hidden aspect-[16/7] min-h-48 max-h-[28rem]">
+                    <img id="client-ad-slider-image" alt="" class="absolute inset-0 h-full w-full object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-slate-950/95 via-slate-950/25 to-slate-950/10"></div>
+                    <div class="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-8">
+                        <div class="min-w-0">
+                            <span id="client-ad-slider-channel" class="inline-flex rounded-full border border-white/20 bg-slate-950/50 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-sky-200 backdrop-blur"></span>
+                            <h3 id="client-ad-slider-title" class="mt-2 text-xl font-extrabold text-white sm:text-3xl"></h3>
+                        </div>
+                        <span id="client-ad-slider-status" class="shrink-0 rounded-full bg-emerald-500/20 px-3 py-1 text-[10px] font-bold text-emerald-200"></span>
+                    </div>
+                    <button id="client-ad-slider-previous" type="button" onclick="changeClientAdSlide(-1)" aria-label="Previous ad" class="absolute left-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-slate-950/60 p-3 text-white backdrop-blur transition hover:bg-slate-950/90">
+                        <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+                    </button>
+                    <button id="client-ad-slider-next" type="button" onclick="changeClientAdSlide(1)" aria-label="Next ad" class="absolute right-3 top-1/2 -translate-y-1/2 rounded-full border border-white/20 bg-slate-950/60 p-3 text-white backdrop-blur transition hover:bg-slate-950/90">
+                        <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+                    </button>
+                    <div id="client-ad-slider-dots" class="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2 sm:bottom-5"></div>
+                </div>
+            </section>
+
             <section class="glass-panel flex flex-col gap-5 rounded-2xl border border-sky-500/20 bg-gradient-to-r from-slate-900 via-sky-950/30 to-slate-900 p-6 sm:flex-row sm:items-center">
                 <img id="client-portal-logo" alt="" class="hidden h-16 w-16 rounded-xl border border-slate-700 bg-white object-contain p-1">
                 <div class="min-w-0 flex-1">
@@ -1590,7 +1618,7 @@
 
     <!-- MODAL: Campaign -->
     <div id="modal-campaign" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
-        <div class="bg-anfac-card border border-anfac-border w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+        <div class="bg-anfac-card border border-anfac-border w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-2xl space-y-4">
             <div class="flex items-center justify-between border-b border-anfac-border pb-3">
                 <h3 id="modal-camp-title" class="text-sm font-bold text-white">Create Digital Ad Campaign</h3>
                 <button onclick="closeCampaignModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
@@ -1607,6 +1635,19 @@
                 <div>
                     <label class="block text-slate-400 mb-1">Client Name</label>
                     <input type="text" id="camp-client" required placeholder="Client name" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-white outline-none">
+                </div>
+
+                <div class="space-y-2">
+                    <label for="camp-ad-image-file" class="block text-slate-400">Client home slider artwork</label>
+                    <div class="flex items-start gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3">
+                        <img id="camp-ad-image-preview" alt="Campaign ad preview" class="hidden h-16 w-24 rounded-lg border border-slate-700 object-cover">
+                        <div class="min-w-0 flex-1">
+                            <input type="hidden" id="camp-ad-image-data">
+                            <input type="file" id="camp-ad-image-file" accept="image/png,image/jpeg,image/webp,image/gif" onchange="handleCampaignAdImageSelect(event)" class="w-full text-[10px] text-slate-400 file:mr-2 file:rounded-lg file:border-0 file:bg-blue-600 file:px-3 file:py-1.5 file:text-[10px] file:font-semibold file:text-white hover:file:bg-blue-500">
+                            <p class="mt-1 text-[9px] text-slate-500">Upload artwork for the client's rotating home slider. Images are compressed before saving.</p>
+                        </div>
+                        <button type="button" onclick="clearCampaignAdImage()" aria-label="Remove campaign ad artwork" class="shrink-0 rounded-lg bg-slate-800 px-2 py-1.5 text-[10px] font-semibold text-slate-300 transition hover:bg-red-600/80">Remove</button>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-2">
@@ -1966,6 +2007,9 @@
         let activeResetOtp = null;
         let backendAuthenticated = false;
         let loginMode = 'admin';
+        let clientAdSlideIndex = 0;
+        let clientAdSlideTimer = null;
+        let clientAdSlides = [];
         let pendingStateSave = Promise.resolve();
         let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         let selectedCalendarDate = '';
@@ -2164,6 +2208,12 @@
         function clearClientPortalUI() {
             const portal = document.getElementById('view-client-portal');
             portal.querySelectorAll('form').forEach(form => form.reset());
+            pauseClientAdRotation();
+            clientAdSlideIndex = 0;
+            clientAdSlides = [];
+            document.getElementById('client-ad-slider-content').classList.add('hidden');
+            document.getElementById('client-ad-slider-empty').classList.remove('hidden');
+            document.getElementById('client-ad-slider-dots').innerHTML = '';
             document.getElementById('client-portal-heading').textContent = 'Your client portal';
             document.getElementById('client-portal-username').textContent = '';
             document.getElementById('client-portal-projects').innerHTML = '';
@@ -2544,6 +2594,7 @@
         function renderClientPortal() {
             if (state.currentUser?.role !== 'client') return;
             const profile = state.clientProfile;
+            renderClientAdSlider();
             document.getElementById('client-portal-heading').textContent =
                 profile?.name ? `Welcome, ${profile.name}` : 'Your client portal';
             document.getElementById('client-portal-username').textContent = state.currentUser.username || '';
@@ -2612,6 +2663,87 @@
                     </article>
                 `).join('')
                 : '<p class="text-xs text-slate-500">Your service requests will appear here.</p>';
+        }
+
+        function isSafeCampaignAdImage(source) {
+            return typeof source === 'string' &&
+                (/^https:\/\/[^\s"'<>]+$/i.test(source) ||
+                    /^data:image\/(?:png|jpeg|webp|gif);base64,[a-z0-9+/]+=*$/i.test(source));
+        }
+
+        function renderClientAdSlider() {
+            const slider = document.getElementById('client-ad-slider');
+            const empty = document.getElementById('client-ad-slider-empty');
+            const content = document.getElementById('client-ad-slider-content');
+            if (state.currentUser?.role !== 'client') {
+                slider.classList.add('hidden');
+                pauseClientAdRotation();
+                return;
+            }
+            slider.classList.remove('hidden');
+            const previousId = clientAdSlides[clientAdSlideIndex]?.id;
+            clientAdSlides = (Array.isArray(state.campaigns) ? state.campaigns : [])
+                .filter(campaign => campaign && String(campaign.status || '').toLowerCase() !== 'completed' &&
+                    isSafeCampaignAdImage(campaign.adImage));
+
+            if (!clientAdSlides.length) {
+                clientAdSlideIndex = 0;
+                pauseClientAdRotation();
+                content.classList.add('hidden');
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            clientAdSlideIndex = Math.max(0, clientAdSlides.findIndex(campaign => campaign.id === previousId));
+            empty.classList.add('hidden');
+            content.classList.remove('hidden');
+            document.getElementById('client-ad-slider-previous').classList.toggle('hidden', clientAdSlides.length < 2);
+            document.getElementById('client-ad-slider-next').classList.toggle('hidden', clientAdSlides.length < 2);
+            renderClientAdSlide();
+            if (clientAdSlides.length > 1) {
+                resumeClientAdRotation();
+            } else {
+                pauseClientAdRotation();
+            }
+        }
+
+        function renderClientAdSlide() {
+            const campaign = clientAdSlides[clientAdSlideIndex];
+            if (!campaign) return;
+            const image = document.getElementById('client-ad-slider-image');
+            image.src = campaign.adImage;
+            image.alt = `${campaign.name || 'Campaign'} advertisement`;
+            document.getElementById('client-ad-slider-title').textContent = campaign.name || 'Campaign';
+            document.getElementById('client-ad-slider-channel').textContent = campaign.channel || 'Campaign';
+            document.getElementById('client-ad-slider-status').textContent = campaign.status || 'Active';
+            document.getElementById('client-ad-slider-dots').innerHTML = clientAdSlides.map((slide, index) => `
+                <button type="button" onclick="goToClientAdSlide(${index})" aria-label="Show ad ${index + 1}" aria-pressed="${index === clientAdSlideIndex}" class="h-2.5 w-2.5 rounded-full border border-white/70 transition ${index === clientAdSlideIndex ? 'bg-white' : 'bg-slate-950/40 hover:bg-white/70'}"></button>
+            `).join('');
+        }
+
+        function changeClientAdSlide(direction) {
+            if (clientAdSlides.length < 2) return;
+            clientAdSlideIndex = (clientAdSlideIndex + direction + clientAdSlides.length) % clientAdSlides.length;
+            renderClientAdSlide();
+        }
+
+        function goToClientAdSlide(index) {
+            if (!Number.isInteger(index) || index < 0 || index >= clientAdSlides.length) return;
+            clientAdSlideIndex = index;
+            renderClientAdSlide();
+        }
+
+        function pauseClientAdRotation() {
+            if (clientAdSlideTimer) {
+                clearInterval(clientAdSlideTimer);
+                clientAdSlideTimer = null;
+            }
+        }
+
+        function resumeClientAdRotation() {
+            if (!clientAdSlideTimer && clientAdSlides.length > 1) {
+                clientAdSlideTimer = setInterval(() => changeClientAdSlide(1), 6000);
+            }
         }
 
         async function refreshClientPortal() {
@@ -4167,6 +4299,7 @@
             document.getElementById('modal-camp-title').innerText = 'Create Digital Ad Campaign';
             document.getElementById('camp-name').value = '';
             document.getElementById('camp-client').value = '';
+            clearCampaignAdImage();
             document.getElementById('camp-budget').value = '';
             document.getElementById('camp-spent').value = '0';
             document.getElementById('camp-revenue').value = '0';
@@ -4182,6 +4315,16 @@
             document.getElementById('modal-camp-title').innerText = `Edit Campaign (${c.name})`;
             document.getElementById('camp-name').value = c.name;
             document.getElementById('camp-client').value = c.client;
+            document.getElementById('camp-ad-image-data').value = isSafeCampaignAdImage(c.adImage) ? c.adImage : '';
+            document.getElementById('camp-ad-image-file').value = '';
+            const adPreview = document.getElementById('camp-ad-image-preview');
+            if (isSafeCampaignAdImage(c.adImage)) {
+                adPreview.src = c.adImage;
+                adPreview.classList.remove('hidden');
+            } else {
+                adPreview.removeAttribute('src');
+                adPreview.classList.add('hidden');
+            }
             document.getElementById('camp-budget').value = c.budget;
             document.getElementById('camp-spent').value = c.spent;
             document.getElementById('camp-revenue').value = c.revenue ?? 0;
@@ -4194,6 +4337,30 @@
             document.getElementById('modal-campaign').classList.add('hidden');
         }
 
+        function clearCampaignAdImage() {
+            document.getElementById('camp-ad-image-data').value = '';
+            document.getElementById('camp-ad-image-file').value = '';
+            const preview = document.getElementById('camp-ad-image-preview');
+            preview.removeAttribute('src');
+            preview.classList.add('hidden');
+        }
+
+        function handleCampaignAdImageSelect(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            if (!file.type.startsWith('image/') || file.size > 10 * 1024 * 1024) {
+                clearCampaignAdImage();
+                showToast('Choose an image smaller than 10 MB.', 'error');
+                return;
+            }
+            compressImageFile(file, 1600, compressedImage => {
+                document.getElementById('camp-ad-image-data').value = compressedImage;
+                const preview = document.getElementById('camp-ad-image-preview');
+                preview.src = compressedImage;
+                preview.classList.remove('hidden');
+            });
+        }
+
         function handleCampaignSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('camp-id').value;
@@ -4204,15 +4371,16 @@
             const revenue = Math.max(0, Number(document.getElementById('camp-revenue').value) || 0);
             const channel = document.getElementById('camp-channel').value;
             const status = document.getElementById('camp-status').value;
+            const adImage = document.getElementById('camp-ad-image-data').value;
 
             if (id) {
                 const idx = state.campaigns.findIndex(c => c.id === id);
                 if (idx !== -1) {
-                    state.campaigns[idx] = { ...state.campaigns[idx], name, client, budget, spent, revenue, channel, status };
+                    state.campaigns[idx] = { ...state.campaigns[idx], name, client, budget, spent, revenue, channel, status, adImage };
                     showToast(`Campaign updated & saved!`, 'success');
                 }
             } else {
-                state.campaigns.unshift({ id: 'CMP-' + Math.floor(100 + Math.random() * 900), name, client, budget, spent, revenue, channel, status });
+                state.campaigns.unshift({ id: 'CMP-' + Math.floor(100 + Math.random() * 900), name, client, budget, spent, revenue, channel, status, adImage });
                 showToast(`Campaign created & saved!`, 'success');
             }
 
@@ -4220,6 +4388,7 @@
             closeCampaignModal();
             renderCampaignsGrid();
             renderRevenueGrowth();
+            renderClientAdSlider();
         }
 
         function deleteCampaign(id) {
@@ -4228,6 +4397,7 @@
             saveStorage();
             renderCampaignsGrid();
             renderRevenueGrowth();
+            renderClientAdSlider();
             showToast('Campaign deleted', 'info');
         }
 
