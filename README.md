@@ -13,6 +13,16 @@ data. The browser assets are in `public/`.
 The deployment database must contain a provisioned administrator account.
 The application does not create a default-password administrator.
 
+## Client portal
+
+Clients can request an account from the sign-in screen. New accounts remain
+pending until an administrator approves them and links them to an existing
+client profile in **Clients & Media Partners**. From the portal, approved
+clients can view their linked projects, campaigns, and bookings; request
+bookings or services; and update their account settings. Clients must enter
+their current password to save profile changes. The portal does not expose
+billing or payment records.
+
 ## Deploying
 
 Link the repository to the Vercel project and configure `DATABASE_URL` for its

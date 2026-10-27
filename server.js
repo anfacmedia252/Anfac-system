@@ -55,10 +55,11 @@ async function getAuthenticatedUser(request, response) {
     return null;
   }
   const result = await getPool().query(`
-    SELECT u.id, u.username, u.role, u.staff_id
+    SELECT u.id, u.username, u.role, u.staff_id, u.client_id, u.approved, u.display_name, u.email
     FROM app_sessions s
     JOIN app_users u ON u.id = s.user_id
-    WHERE s.token_hash = $1 AND s.expires_at > NOW()
+    WHERE s.token_hash = $1 AND s.expires_at > NOW() AND u.approved = TRUE
+      AND (u.role <> 'client' OR u.client_id IS NOT NULL)
   `, [crypto.createHash('sha256').update(token).digest('hex')]);
   const session = result.rows[0];
   if (!session) {
@@ -70,7 +71,10 @@ async function getAuthenticatedUser(request, response) {
     id: session.id,
     username: session.username,
     role: session.role,
-    staffId: session.staff_id
+    staffId: session.staff_id,
+    clientId: session.client_id,
+    displayName: session.display_name,
+    email: session.email
   };
 }
 
@@ -86,9 +90,43 @@ function requireAdmin(request, response, next) {
   next();
 }
 
+function roleRoute(role, handler) {
+  return asyncRoute(async (request, response, next) => {
+    const user = await getAuthenticatedUser(request, response);
+    if (!user) return;
+    if (user.role !== role) {
+      return response.status(403).json({ error: `${role === 'client' ? 'Client' : 'Administrator'} access is required.` });
+    }
+    request.user = user;
+    return handler(request, response, next);
+  });
+}
+
 async function loadSharedState() {
   const result = await getPool().query('SELECT state_json FROM app_state WHERE id = 1');
   return result.rows[0]?.state_json || null;
+}
+
+async function updateSharedState(update) {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query('SELECT state_json FROM app_state WHERE id = 1 FOR UPDATE');
+    if (!result.rows[0]) throw new Error('Shared app data has not been initialized.');
+    const state = result.rows[0].state_json;
+    const value = await update(state);
+    await client.query(`
+      UPDATE app_state SET state_json = $1::jsonb, updated_at = CURRENT_TIMESTAMP
+      WHERE id = 1
+    `, [JSON.stringify(state)]);
+    await client.query('COMMIT');
+    return value;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 async function saveSharedState(state) {
@@ -103,6 +141,39 @@ async function saveSharedState(state) {
 
 function publicState(state, user) {
   if (!state) return null;
+  if (user.role === 'client') {
+    const clients = Array.isArray(state.clients) ? state.clients : [];
+    const client = clients.find(record => record?.id === user.clientId);
+    if (!client) return null;
+    const clientName = String(client.name || '').trim().toLocaleLowerCase();
+    const nameMatches = clients.filter(record =>
+      record && String(record.name || '').trim().toLocaleLowerCase() === clientName
+    ).length;
+    const belongsToClient = record => record && (record.clientId === user.clientId ||
+      (clientName && !record.clientId && nameMatches === 1 &&
+        String(record.client || '').trim().toLocaleLowerCase() === clientName));
+    return {
+      currentUser: {
+        role: user.role,
+        username: user.username,
+        clientId: user.clientId,
+        displayName: user.displayName,
+        email: user.email
+      },
+      clientProfile: {
+        id: client.id,
+        name: client.name,
+        logo: client.logo || '',
+        status: client.status || ''
+      },
+      companyLogo: state.companyLogo || '',
+      projects: (Array.isArray(state.projects) ? state.projects : []).filter(belongsToClient),
+      campaigns: (Array.isArray(state.campaigns) ? state.campaigns : []).filter(belongsToClient),
+      bookings: (Array.isArray(state.bookings) ? state.bookings : []).filter(belongsToClient),
+      clientRequests: (Array.isArray(state.clientRequests) ? state.clientRequests : [])
+        .filter(request => request?.clientId === user.clientId)
+    };
+  }
   const safeState = { ...state };
   delete safeState.adminAuth;
   safeState.currentUser = { role: user.role, username: user.username, staffId: user.staffId };
@@ -141,6 +212,12 @@ app.post('/api/auth/login', asyncRoute(async (request, response) => {
   if (!account || !verifyPassword(password, account.password_hash)) {
     return response.status(401).json({ error: 'Invalid username or password.' });
   }
+  if (!account.approved) {
+    return response.status(403).json({ error: 'Your client account is awaiting administrator approval.' });
+  }
+  if (account.role === 'client' && !account.client_id) {
+    return response.status(403).json({ error: 'Your client account must be linked to an existing client profile before you can sign in.' });
+  }
 
   const token = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
@@ -152,8 +229,48 @@ app.post('/api/auth/login', asyncRoute(async (request, response) => {
   );
   setSessionCookie(response, token);
   response.json({
-    user: { role: account.role, username: account.username, staffId: account.staff_id }
+    user: {
+      role: account.role,
+      username: account.username,
+      staffId: account.staff_id,
+      clientId: account.client_id,
+      displayName: account.display_name,
+      email: account.email
+    }
   });
+}));
+
+app.post('/api/auth/client-signup', asyncRoute(async (request, response) => {
+  const displayName = typeof request.body.displayName === 'string' ? request.body.displayName.trim() : '';
+  const email = typeof request.body.email === 'string' ? request.body.email.trim().toLowerCase() : '';
+  const username = typeof request.body.username === 'string' ? request.body.username.trim().toLowerCase() : '';
+  const password = typeof request.body.password === 'string' ? request.body.password : '';
+  if (!displayName || displayName.length > 120 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
+      !/^[a-z0-9._-]{3,100}$/.test(username) ||
+      password.length < 8 || password.length > 256) {
+    return response.status(400).json({
+      error: 'Enter your name, a valid email, a username (3–100 letters, numbers, dots, underscores or hyphens), and a password of at least 8 characters.'
+    });
+  }
+
+  try {
+    const result = await getPool().query(`
+      INSERT INTO app_users (username, password_hash, role, approved, display_name, email)
+      VALUES ($1, $2, 'client', FALSE, $3, $4)
+      RETURNING id
+    `, [username, hashPassword(password), displayName, email]);
+    response.status(201).json({
+      success: true,
+      message: 'Your account request was submitted. An administrator must link it to your client profile before you can sign in.',
+      id: result.rows[0].id
+    });
+  } catch (error) {
+    if (error.code === '23505') {
+      return response.status(409).json({ error: 'That username is already in use.' });
+    }
+    throw error;
+  }
 }));
 
 app.post('/api/auth/logout', asyncRoute(async (request, response) => {
@@ -172,6 +289,135 @@ app.get('/api/auth/session', asyncRoute(async (request, response) => {
   if (user) response.json({ user });
 }));
 
+app.put('/api/client/profile', roleRoute('client', async (request, response) => {
+  const displayName = typeof request.body.displayName === 'string' ? request.body.displayName.trim() : '';
+  const email = typeof request.body.email === 'string' ? request.body.email.trim().toLowerCase() : '';
+  const username = typeof request.body.username === 'string' ? request.body.username.trim().toLowerCase() : '';
+  const currentPassword = typeof request.body.currentPassword === 'string' ? request.body.currentPassword : '';
+  const newPassword = typeof request.body.newPassword === 'string' ? request.body.newPassword : '';
+  if (!displayName || displayName.length > 120 ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
+      !/^[a-z0-9._-]{3,100}$/.test(username) ||
+      (newPassword && (newPassword.length < 8 || newPassword.length > 256))) {
+    return response.status(400).json({ error: 'Enter a valid name, email, username, and password (at least 8 characters).' });
+  }
+  const accountResult = await getPool().query(
+    "SELECT password_hash FROM app_users WHERE id = $1 AND role = 'client' AND approved = TRUE",
+    [request.user.id]
+  );
+  const account = accountResult.rows[0];
+  if (!account || !verifyPassword(currentPassword, account.password_hash)) {
+    return response.status(401).json({ error: 'Enter your current password to save account changes.' });
+  }
+
+  try {
+    const updated = await getPool().query(`
+      UPDATE app_users
+      SET display_name = $1, email = $2, username = $3,
+          password_hash = CASE WHEN $4 = '' THEN password_hash ELSE $5 END
+      WHERE id = $6 AND role = 'client' AND approved = TRUE
+      RETURNING username, display_name, email, client_id
+    `, [displayName, email, username, newPassword, newPassword ? hashPassword(newPassword) : '', request.user.id]);
+    const user = updated.rows[0];
+    if (!user) return response.status(401).json({ error: 'Client account is no longer available.' });
+    response.json({
+      success: true,
+      user: {
+        role: 'client',
+        username: user.username,
+        displayName: user.display_name,
+        email: user.email,
+        clientId: user.client_id
+      }
+    });
+  } catch (error) {
+    if (error.code === '23505') {
+      return response.status(409).json({ error: 'That username is already in use.' });
+    }
+    throw error;
+  }
+}));
+
+app.post('/api/client/bookings', roleRoute('client', async (request, response) => {
+  const title = typeof request.body.title === 'string' ? request.body.title.trim() : '';
+  const datetime = typeof request.body.datetime === 'string' ? request.body.datetime.trim() : '';
+  const match = datetime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+  if (!title || title.length > 200 || !match) {
+    return response.status(400).json({ error: 'Enter a session name and a valid booking date and time.' });
+  }
+  const [, year, month, day, hour, minute] = match.map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 ||
+      date.getUTCDate() !== day || date.getUTCHours() !== hour || date.getUTCMinutes() !== minute) {
+    return response.status(400).json({ error: 'Enter a valid booking date and time.' });
+  }
+
+  let booking;
+  try {
+    booking = await updateSharedState(state => {
+      const clients = Array.isArray(state.clients) ? state.clients : [];
+      const client = clients.find(record => record.id === request.user.clientId);
+      if (!client) {
+        const error = new Error('Your client profile is unavailable. Contact the administrator.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (!Array.isArray(state.bookings)) state.bookings = [];
+      const newBooking = {
+        id: `BK-${crypto.randomUUID()}`,
+        title,
+        client: client.name,
+        clientId: client.id,
+        datetime,
+        status: 'Pending'
+      };
+      state.bookings.unshift(newBooking);
+      return newBooking;
+    });
+  } catch (error) {
+    if (error.statusCode) return response.status(error.statusCode).json({ error: error.message });
+    throw error;
+  }
+  response.status(201).json({ success: true, booking });
+}));
+
+app.post('/api/client/requests', roleRoute('client', async (request, response) => {
+  const subject = typeof request.body.subject === 'string' ? request.body.subject.trim() : '';
+  const message = typeof request.body.message === 'string' ? request.body.message.trim() : '';
+  if (!subject || subject.length > 160 || !message || message.length > 5000) {
+    return response.status(400).json({ error: 'Enter a subject and a message of up to 5,000 characters.' });
+  }
+
+  let clientRequest;
+  try {
+    clientRequest = await updateSharedState(state => {
+      const client = (Array.isArray(state.clients) ? state.clients : [])
+        .find(record => record.id === request.user.clientId);
+      if (!client) {
+        const error = new Error('Your client profile is unavailable. Contact the administrator.');
+        error.statusCode = 409;
+        throw error;
+      }
+      if (!Array.isArray(state.clientRequests)) state.clientRequests = [];
+      const newRequest = {
+        id: crypto.randomUUID(),
+        clientId: client.id,
+        clientName: client.name,
+        subject,
+        message,
+        status: 'New',
+        createdAt: new Date().toISOString()
+      };
+      state.clientRequests.unshift(newRequest);
+      return newRequest;
+    });
+  } catch (error) {
+    if (error.statusCode) return response.status(error.statusCode).json({ error: error.message });
+    throw error;
+  }
+  response.status(201).json({ success: true, request: clientRequest });
+}));
+
 app.get('/api/app-state', asyncRoute(async (request, response) => {
   const user = await getAuthenticatedUser(request, response);
   if (!user) return;
@@ -185,6 +431,9 @@ app.get('/api/app-state', asyncRoute(async (request, response) => {
 app.post('/api/app-state', asyncRoute(async (request, response) => {
   const user = await getAuthenticatedUser(request, response);
   if (!user) return;
+      if (user.role === 'client') {
+        return response.status(403).json({ error: 'Client accounts cannot replace shared application data.' });
+      }
       const incoming = request.body;
       if (!incoming || typeof incoming !== 'object' || Array.isArray(incoming)) {
         return response.status(400).json({ error: 'App state must be a JSON object.' });
@@ -242,6 +491,20 @@ app.post('/api/app-state', asyncRoute(async (request, response) => {
       const client = await getPool().connect();
       try {
         await client.query('BEGIN');
+        const existingStateResult = await client.query(
+          'SELECT state_json FROM app_state WHERE id = 1 FOR UPDATE'
+        );
+        const existingState = existingStateResult.rows[0]?.state_json;
+        if (existingState) {
+          if (Array.isArray(existingState.clientRequests)) {
+            state.clientRequests = existingState.clientRequests;
+          }
+          const incomingBookings = Array.isArray(state.bookings) ? state.bookings : [];
+          const incomingBookingIds = new Set(incomingBookings.map(booking => booking?.id));
+          const newClientBookings = (Array.isArray(existingState.bookings) ? existingState.bookings : [])
+            .filter(booking => booking?.clientId && !incomingBookingIds.has(booking.id));
+          state.bookings = [...incomingBookings, ...newClientBookings];
+        }
         for (const member of incoming.staff) {
           if (typeof member.id !== 'string' || !member.id || typeof member.username !== 'string' || !member.username.trim()) {
             throw new Error('Each staff member needs an ID and username.');
@@ -328,6 +591,92 @@ app.use('/api', asyncRoute(authenticate), (request, response, next) => {
   if (!request.user) return;
   requireAdmin(request, response, next);
 });
+
+app.get('/api/admin/client-accounts', asyncRoute(async (request, response) => {
+  const result = await getPool().query(`
+    SELECT id, username, display_name, email, created_at
+    FROM app_users
+    WHERE role = 'client' AND approved = FALSE
+    ORDER BY created_at ASC
+  `);
+  response.json(result.rows);
+}));
+
+app.post('/api/admin/client-accounts/:id/approve', asyncRoute(async (request, response) => {
+  const clientId = typeof request.body.clientId === 'string' ? request.body.clientId.trim() : '';
+  if (!clientId) return response.status(400).json({ error: 'Select the existing client profile for this account.' });
+
+  const connection = await getPool().connect();
+  try {
+    await connection.query('BEGIN');
+    const stateResult = await connection.query('SELECT state_json FROM app_state WHERE id = 1 FOR UPDATE');
+    const state = stateResult.rows[0]?.state_json;
+    if (!state) {
+      await connection.query('ROLLBACK');
+      return response.status(409).json({ error: 'Initialize the client directory before approving accounts.' });
+    }
+    const client = (Array.isArray(state.clients) ? state.clients : []).find(record => record.id === clientId);
+    if (!client) {
+      await connection.query('ROLLBACK');
+      return response.status(404).json({ error: 'The selected client profile no longer exists.' });
+    }
+    const result = await connection.query(`
+      UPDATE app_users
+      SET client_id = $1, approved = TRUE
+      WHERE id = $2 AND role = 'client' AND approved = FALSE
+      RETURNING id
+    `, [clientId, request.params.id]);
+    if (!result.rows.length) {
+      await connection.query('ROLLBACK');
+      return response.status(404).json({ error: 'Pending client account not found.' });
+    }
+    await connection.query('COMMIT');
+    response.json({ success: true });
+  } catch (error) {
+    await connection.query('ROLLBACK');
+    throw error;
+  } finally {
+    connection.release();
+  }
+}));
+
+app.delete('/api/admin/client-accounts/:id', asyncRoute(async (request, response) => {
+  const result = await getPool().query(`
+    DELETE FROM app_users
+    WHERE id = $1 AND role = 'client' AND approved = FALSE
+    RETURNING id
+  `, [request.params.id]);
+  if (!result.rows.length) return response.status(404).json({ error: 'Pending client account not found.' });
+  response.json({ success: true });
+}));
+
+app.get('/api/admin/client-requests', asyncRoute(async (request, response) => {
+  const state = await loadSharedState();
+  response.json(Array.isArray(state?.clientRequests) ? state.clientRequests : []);
+}));
+
+app.patch('/api/admin/client-requests/:id', asyncRoute(async (request, response) => {
+  const status = typeof request.body.status === 'string' ? request.body.status : '';
+  if (!['New', 'In Progress', 'Completed'].includes(status)) {
+    return response.status(400).json({ error: 'Choose New, In Progress, or Completed.' });
+  }
+  try {
+    await updateSharedState(state => {
+      const clientRequest = (Array.isArray(state.clientRequests) ? state.clientRequests : [])
+        .find(item => item.id === request.params.id);
+      if (!clientRequest) {
+        const error = new Error('Client request not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+      clientRequest.status = status;
+    });
+  } catch (error) {
+    if (error.statusCode) return response.status(error.statusCode).json({ error: error.message });
+    throw error;
+  }
+  response.json({ success: true });
+}));
 
 app.get('/api/transactions', asyncRoute(async (request, response) => {
   const result = await getPool().query('SELECT * FROM transactions ORDER BY date DESC, id DESC');
