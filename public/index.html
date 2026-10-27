@@ -100,7 +100,7 @@
             </div>
             <div>
                 <h1 class="text-2xl font-black text-white tracking-wider">ANFAC <span class="text-anfac-red text-sm">MEDIA SYSTEM</span></h1>
-                <p class="text-xs text-slate-400 mt-1" id="auth-subtitle">Executive & Staff Portal Authentication</p>
+                <p class="text-xs text-slate-400 mt-1" id="auth-subtitle">Administrator & Staff Sign In</p>
             </div>
 
             <!-- STANDARD SIGN IN FORM -->
@@ -108,7 +108,7 @@
                 <div>
                     <label class="block text-slate-400 mb-1 font-semibold">Username</label>
                     <div class="relative flex items-center">
-                        <i class="fa-solid fa-user-shield absolute left-3.5 text-slate-500"></i>
+                        <i id="login-user-icon" class="fa-solid fa-user-shield absolute left-3.5 text-slate-500"></i>
                         <input type="text" id="login-user" required placeholder="Enter username..." class="w-full bg-slate-900 border border-slate-700 rounded-xl pl-10 pr-3.5 py-2.5 text-white outline-none focus:border-blue-500 transition">
                     </div>
                 </div>
@@ -129,37 +129,12 @@
                 </div>
                 <div class="pt-2">
                     <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-right-to-bracket"></i> Sign In to System
+                        <i class="fa-solid fa-right-to-bracket"></i> <span id="login-submit-label">Sign In to System</span>
                     </button>
                 </div>
-                <button type="button" onclick="openClientSignup()" class="w-full pt-1 text-[11px] font-semibold text-sky-400 transition hover:text-sky-300">
-                    Client? Request a portal account
+                <button type="button" onclick="toggleLoginMode()" id="login-mode-toggle" class="w-full pt-1 text-[11px] font-semibold text-sky-400 transition hover:text-sky-300">
+                    Client? Sign in to your portal
                 </button>
-            </form>
-
-            <form id="client-signup-panel" onsubmit="handleClientSignup(event)" class="hidden space-y-3 text-left text-xs">
-                <div class="rounded-xl border border-blue-500/20 bg-blue-500/10 p-3 text-[11px] leading-relaxed text-slate-300">
-                    Create a client login request. An administrator must approve your account and link it to your client profile before you can access the portal.
-                </div>
-                <label class="block text-slate-400 font-semibold">Your name
-                    <input type="text" id="signup-client-name" required maxlength="120" autocomplete="name" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-white outline-none focus:border-blue-500">
-                </label>
-                <label class="block text-slate-400 font-semibold">Email
-                    <input type="email" id="signup-client-email" required maxlength="254" autocomplete="email" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-white outline-none focus:border-blue-500">
-                </label>
-                <label class="block text-slate-400 font-semibold">Username
-                    <input type="text" id="signup-client-username" required minlength="3" maxlength="100" pattern="[A-Za-z0-9._-]+" autocomplete="username" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-white outline-none focus:border-blue-500">
-                </label>
-                <label class="block text-slate-400 font-semibold">Password (at least 8 characters)
-                    <input type="password" id="signup-client-password" required minlength="8" maxlength="256" autocomplete="new-password" class="mt-1 w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-white outline-none focus:border-blue-500">
-                </label>
-                <div id="client-signup-message" class="hidden rounded-xl border px-3 py-2 text-[11px]" role="status"></div>
-                <div class="flex gap-2 pt-1">
-                    <button type="button" onclick="backToLoginPanel()" class="w-1/3 rounded-xl bg-slate-800 py-2.5 font-bold text-slate-300 transition hover:bg-slate-700">Back</button>
-                    <button type="submit" class="w-2/3 rounded-xl bg-blue-600 py-2.5 font-bold text-white transition hover:bg-blue-500">
-                        <i class="fa-solid fa-user-check mr-1"></i> Request Account
-                    </button>
-                </div>
             </form>
 
             <!-- ADMIN PASSWORD RESET: STEP 1 (REQUEST REAL EMAIL OTP) -->
@@ -630,13 +605,41 @@
 
             <div id="clients-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
 
+            <section class="glass-panel space-y-4 rounded-2xl border border-sky-500/20 p-5">
+                <div>
+                    <h3 class="text-sm font-bold text-white">Create a client portal sign-in</h3>
+                    <p class="mt-1 text-[11px] text-slate-400">Choose an existing client profile, create login credentials, then share them securely with that client.</p>
+                </div>
+                <form id="client-account-create-form" onsubmit="createClientAccount(event)" class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label class="text-[10px] font-semibold text-slate-400 md:col-span-2">Link to client profile
+                        <select id="client-account-create-client" required class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white">
+                            <option value="">Select an existing client…</option>
+                        </select>
+                    </label>
+                    <label class="text-[10px] font-semibold text-slate-400">Client sign-in username
+                        <input id="client-account-create-username" type="text" required minlength="3" maxlength="100" pattern="[A-Za-z0-9._-]+" autocomplete="off" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white" placeholder="client.username">
+                    </label>
+                    <label class="text-[10px] font-semibold text-slate-400">Client email
+                        <input id="client-account-create-email" type="email" required maxlength="254" autocomplete="off" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white" placeholder="client@example.com">
+                    </label>
+                    <label class="text-[10px] font-semibold text-slate-400 md:col-span-2">Temporary password (minimum 8 characters)
+                        <input id="client-account-create-password" type="password" required minlength="8" maxlength="256" autocomplete="new-password" class="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-white">
+                    </label>
+                    <div class="flex flex-wrap items-center justify-between gap-2 md:col-span-2">
+                        <p class="text-[10px] text-slate-500">The client signs in using the portal button on this page and these credentials.</p>
+                        <button type="submit" class="rounded-lg bg-sky-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-sky-500">Create & link account</button>
+                    </div>
+                    <p id="client-account-create-message" class="hidden md:col-span-2 rounded-lg border px-3 py-2 text-[11px]" role="status"></p>
+                </form>
+            </section>
+
             <section class="glass-panel space-y-4 rounded-2xl border border-anfac-border p-5">
                 <div>
-                    <h3 class="text-sm font-bold text-white">Client portal account requests</h3>
-                    <p class="mt-1 text-[11px] text-slate-400">Review sign-ups and link each approved account to one existing client profile.</p>
+                    <h3 class="text-sm font-bold text-white">Existing client portal accounts</h3>
+                    <p class="mt-1 text-[11px] text-slate-400">Review accounts already linked to client profiles or resolve older unlinked requests.</p>
                 </div>
                 <div id="pending-client-accounts" class="space-y-3">
-                    <p class="text-xs text-slate-500">Loading account requests…</p>
+                    <p class="text-xs text-slate-500">Loading client accounts…</p>
                 </div>
             </section>
 
@@ -1962,6 +1965,7 @@
         let state = JSON.parse(JSON.stringify(DEFAULT_DATA));
         let activeResetOtp = null;
         let backendAuthenticated = false;
+        let loginMode = 'admin';
         let pendingStateSave = Promise.resolve();
         let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         let selectedCalendarDate = '';
@@ -2172,6 +2176,13 @@
         }
 
         function clearAdminClientManagementUI() {
+            const createForm = document.getElementById('client-account-create-form');
+            createForm.reset();
+            document.getElementById('client-account-create-client').innerHTML =
+                '<option value="">Sign in as an administrator to create accounts.</option>';
+            const createMessage = document.getElementById('client-account-create-message');
+            createMessage.textContent = '';
+            createMessage.className = 'hidden md:col-span-2 rounded-lg border px-3 py-2 text-[11px]';
             document.getElementById('pending-client-accounts').textContent = 'Sign in as an administrator to review account requests.';
             document.getElementById('admin-client-requests').textContent = 'Sign in as an administrator to review client requests.';
         }
@@ -2224,42 +2235,30 @@
         function backToLoginPanel() {
             document.getElementById('forgot-step1-panel').classList.add('hidden');
             document.getElementById('forgot-step2-panel').classList.add('hidden');
-            document.getElementById('client-signup-panel').classList.add('hidden');
             document.getElementById('login-form-panel').classList.remove('hidden');
-            document.getElementById('auth-subtitle').innerText = 'Executive & Staff Portal Authentication';
+            setLoginMode(loginMode);
         }
 
-        function openClientSignup() {
-            document.getElementById('login-form-panel').classList.add('hidden');
-            document.getElementById('forgot-step1-panel').classList.add('hidden');
-            document.getElementById('forgot-step2-panel').classList.add('hidden');
-            document.getElementById('client-signup-panel').classList.remove('hidden');
-            document.getElementById('client-signup-message').classList.add('hidden');
-            document.getElementById('auth-subtitle').innerText = 'Client Portal Account Request';
+        function setLoginMode(mode) {
+            loginMode = mode === 'client' ? 'client' : 'admin';
+            const clientLogin = loginMode === 'client';
+            document.getElementById('auth-subtitle').innerText = clientLogin
+                ? 'Client Portal Sign In'
+                : 'Administrator & Staff Sign In';
+            document.getElementById('login-submit-label').innerText = clientLogin
+                ? 'Sign In to Client Portal'
+                : 'Sign In to System';
+            document.getElementById('login-user-icon').className = clientLogin
+                ? 'fa-solid fa-user absolute left-3.5 text-slate-500'
+                : 'fa-solid fa-user-shield absolute left-3.5 text-slate-500';
+            document.getElementById('login-mode-toggle').innerText = clientLogin
+                ? 'Administrator or staff? Sign in here'
+                : 'Client? Sign in to your portal';
+            document.getElementById('login-error-msg').classList.add('hidden');
         }
 
-        async function handleClientSignup(event) {
-            event.preventDefault();
-            const message = document.getElementById('client-signup-message');
-            message.className = 'rounded-xl border px-3 py-2 text-[11px]';
-            try {
-                const result = await requestApi('/api/auth/client-signup', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        displayName: document.getElementById('signup-client-name').value,
-                        email: document.getElementById('signup-client-email').value,
-                        username: document.getElementById('signup-client-username').value,
-                        password: document.getElementById('signup-client-password').value
-                    })
-                });
-                message.textContent = result.message;
-                message.classList.add('border-emerald-500/30', 'bg-emerald-500/10', 'text-emerald-300');
-                document.getElementById('client-signup-panel').reset();
-            } catch (error) {
-                message.textContent = error.message || 'Could not submit the account request.';
-                message.classList.add('border-red-500/30', 'bg-red-500/10', 'text-red-300');
-            }
-            message.classList.remove('hidden');
+        function toggleLoginMode() {
+            setLoginMode(loginMode === 'client' ? 'admin' : 'client');
         }
 
         async function handleSendResetOtp(e) {
@@ -2357,7 +2356,8 @@
 
         async function handleLogin(e) {
             e.preventDefault();
-            const userInp = document.getElementById('login-user').value.trim();
+            const enteredUsername = document.getElementById('login-user').value.trim();
+            const userInp = loginMode === 'client' ? enteredUsername.toLowerCase() : enteredUsername;
             const passInp = document.getElementById('login-pass').value;
             const errBox = document.getElementById('login-error-msg');
             errBox.innerText = 'Invalid username or password. Please try again.';
@@ -2367,6 +2367,11 @@
                     body: JSON.stringify({ username: userInp, password: passInp })
                 });
                 backendAuthenticated = true;
+                if ((loginMode === 'client') !== (login.user.role === 'client')) {
+                    throw new Error(loginMode === 'client'
+                        ? 'This account is not linked to the client portal. Contact ANFAC Media to get your client login.'
+                        : 'This is a client portal account. Choose “Client? Sign in to your portal” to continue.');
+                }
                 if (login.user.role === 'client') clearLocalAdminState();
                 const shared = await requestApi('/api/app-state');
                 state.currentUser = login.user;
@@ -2685,30 +2690,63 @@
                     requestApi('/api/admin/client-requests')
                 ]);
                 renderPendingClientAccounts(accounts);
+                renderClientAccountCreateOptions(accounts);
                 renderAdminClientRequests(requests);
             } catch (error) {
                 console.error('Client management load error:', error);
                 document.getElementById('pending-client-accounts').textContent =
-                    `Could not load client account requests: ${error.message}`;
+                    `Could not load client accounts: ${error.message}`;
                 document.getElementById('admin-client-requests').textContent =
                     `Could not load service requests: ${error.message}`;
             }
         }
 
+        function renderClientAccountCreateOptions(accounts) {
+            const select = document.getElementById('client-account-create-client');
+            const clients = Array.isArray(state.clients) ? state.clients : [];
+            const linkedIds = new Set(accounts
+                .filter(account => account.approved && account.client_id)
+                .map(account => String(account.client_id)));
+            select.innerHTML = '<option value="">Select an existing client…</option>' +
+                clients.map(client => {
+                    const linked = linkedIds.has(String(client.id));
+                    return `<option value="${escapeHtml(client.id)}" ${linked ? 'disabled' : ''}>${escapeHtml(client.name)}${linked ? ' — account already linked' : ''}</option>`;
+                }).join('');
+            if (!clients.length) {
+                select.innerHTML = '<option value="">Create a client profile first</option>';
+            }
+        }
+
         function renderPendingClientAccounts(accounts) {
             const container = document.getElementById('pending-client-accounts');
-            if (!accounts.length) {
-                container.innerHTML = '<p class="text-xs text-slate-500">No client sign-up requests are waiting for approval.</p>';
-                return;
-            }
             const clients = Array.isArray(state.clients) ? state.clients : [];
-            container.innerHTML = accounts.map(account => `
+            const activeAccounts = accounts.filter(account => account.approved && account.client_id);
+            const pendingAccounts = accounts.filter(account => !account.approved || !account.client_id);
+            const activeMarkup = activeAccounts.length
+                ? `<div class="space-y-2"><h4 class="text-[10px] font-bold uppercase tracking-wide text-emerald-300">Linked accounts</h4>
+                    ${activeAccounts.map(account => {
+                        const client = clients.find(item => String(item.id) === String(account.client_id));
+                        return `<article class="rounded-xl border border-emerald-500/15 bg-slate-900/60 p-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div>
+                                    <h5 class="text-xs font-semibold text-white">${escapeHtml(client?.name || account.display_name || 'Client')}</h5>
+                                    <p class="mt-1 text-[10px] text-slate-400">Portal login: <span class="font-semibold text-slate-200">${escapeHtml(account.username)}</span> · ${escapeHtml(account.email || 'No email')}</p>
+                                </div>
+                                <span class="rounded-full bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-300">Active</span>
+                            </div>
+                        </article>`;
+                    }).join('')}
+                </div>`
+                : '<p class="text-xs text-slate-500">No linked client accounts yet. Create one above.</p>';
+            const pendingMarkup = pendingAccounts.length
+                ? `<div class="space-y-3"><h4 class="pt-2 text-[10px] font-bold uppercase tracking-wide text-amber-300">Older unlinked account requests</h4>
+                    ${pendingAccounts.map(account => `
                 <article class="client-account-card rounded-xl border border-slate-800 bg-slate-900/60 p-4" data-client-account-id="${escapeHtml(account.id)}">
                     <div class="flex flex-wrap items-start justify-between gap-2">
                         <div>
                             <h4 class="text-xs font-bold text-white">${escapeHtml(account.display_name)}</h4>
                             <p class="mt-1 text-[10px] text-slate-400">${escapeHtml(account.email)} · @${escapeHtml(account.username)}</p>
-                            <p class="mt-1 text-[10px] text-slate-500">Requested ${escapeHtml(new Date(account.created_at).toLocaleString())}</p>
+                            <p class="mt-1 text-[10px] text-slate-500">Not linked to an active client profile</p>
                         </div>
                         <button type="button" class="client-account-reject rounded-lg border border-red-500/20 px-3 py-1.5 text-[10px] font-semibold text-red-300 hover:bg-red-500/10">Reject</button>
                     </div>
@@ -2722,13 +2760,45 @@
                         </button>
                     </div>
                 </article>
-            `).join('');
+                    `).join('')}
+                </div>`
+                : '';
+            container.innerHTML = `<div class="space-y-4">${activeMarkup}${pendingMarkup}</div>`;
             container.querySelectorAll('.client-account-approve').forEach(button => {
                 button.addEventListener('click', () => approveClientAccount(button.closest('.client-account-card')));
             });
             container.querySelectorAll('.client-account-reject').forEach(button => {
                 button.addEventListener('click', () => rejectClientAccount(button.closest('.client-account-card')));
             });
+        }
+
+        async function createClientAccount(event) {
+            event.preventDefault();
+            const form = document.getElementById('client-account-create-form');
+            const message = document.getElementById('client-account-create-message');
+            const temporaryPassword = document.getElementById('client-account-create-password').value;
+            message.className = 'hidden md:col-span-2 rounded-lg border px-3 py-2 text-[11px]';
+            try {
+                const result = await requestApi('/api/admin/client-accounts', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        clientId: document.getElementById('client-account-create-client').value,
+                        username: document.getElementById('client-account-create-username').value,
+                        email: document.getElementById('client-account-create-email').value,
+                        password: document.getElementById('client-account-create-password').value
+                    })
+                });
+                form.reset();
+                message.textContent = `Account linked to ${result.account.clientName}. Username: ${result.account.username} · Temporary password: ${temporaryPassword}. Copy these credentials and share them securely; the password cannot be viewed again.`;
+                message.classList.add('border-emerald-500/30', 'bg-emerald-500/10', 'text-emerald-300');
+                message.classList.remove('hidden');
+                await loadAdminClientManagement();
+                showToast('Client sign-in created and linked.', 'success');
+            } catch (error) {
+                message.textContent = error.message || 'Could not create the client sign-in.';
+                message.classList.add('border-red-500/30', 'bg-red-500/10', 'text-red-300');
+                message.classList.remove('hidden');
+            }
         }
 
         function renderAdminClientRequests(requests) {

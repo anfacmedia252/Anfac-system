@@ -240,39 +240,6 @@ app.post('/api/auth/login', asyncRoute(async (request, response) => {
   });
 }));
 
-app.post('/api/auth/client-signup', asyncRoute(async (request, response) => {
-  const displayName = typeof request.body.displayName === 'string' ? request.body.displayName.trim() : '';
-  const email = typeof request.body.email === 'string' ? request.body.email.trim().toLowerCase() : '';
-  const username = typeof request.body.username === 'string' ? request.body.username.trim().toLowerCase() : '';
-  const password = typeof request.body.password === 'string' ? request.body.password : '';
-  if (!displayName || displayName.length > 120 ||
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
-      !/^[a-z0-9._-]{3,100}$/.test(username) ||
-      password.length < 8 || password.length > 256) {
-    return response.status(400).json({
-      error: 'Enter your name, a valid email, a username (3–100 letters, numbers, dots, underscores or hyphens), and a password of at least 8 characters.'
-    });
-  }
-
-  try {
-    const result = await getPool().query(`
-      INSERT INTO app_users (username, password_hash, role, approved, display_name, email)
-      VALUES ($1, $2, 'client', FALSE, $3, $4)
-      RETURNING id
-    `, [username, hashPassword(password), displayName, email]);
-    response.status(201).json({
-      success: true,
-      message: 'Your account request was submitted. An administrator must link it to your client profile before you can sign in.',
-      id: result.rows[0].id
-    });
-  } catch (error) {
-    if (error.code === '23505') {
-      return response.status(409).json({ error: 'That username is already in use.' });
-    }
-    throw error;
-  }
-}));
-
 app.post('/api/auth/logout', asyncRoute(async (request, response) => {
   const token = cookieValue(request, 'anfac_session');
   if (token) {
@@ -594,12 +561,82 @@ app.use('/api', asyncRoute(authenticate), (request, response, next) => {
 
 app.get('/api/admin/client-accounts', asyncRoute(async (request, response) => {
   const result = await getPool().query(`
-    SELECT id, username, display_name, email, created_at
+    SELECT id, username, display_name, email, client_id, approved, created_at
     FROM app_users
-    WHERE role = 'client' AND approved = FALSE
-    ORDER BY created_at ASC
+    WHERE role = 'client'
+    ORDER BY approved DESC, created_at ASC
   `);
   response.json(result.rows);
+}));
+
+app.post('/api/admin/client-accounts', asyncRoute(async (request, response) => {
+  const clientId = typeof request.body.clientId === 'string' ? request.body.clientId.trim() : '';
+  const username = typeof request.body.username === 'string'
+    ? request.body.username.trim().toLowerCase()
+    : '';
+  const email = typeof request.body.email === 'string'
+    ? request.body.email.trim().toLowerCase()
+    : '';
+  const password = typeof request.body.password === 'string' ? request.body.password : '';
+  if (!clientId ||
+      !/^[a-z0-9._-]{3,100}$/.test(username) ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 ||
+      password.length < 8 || password.length > 256) {
+    return response.status(400).json({
+      error: 'Choose a client profile and enter a valid username, email, and password of at least 8 characters.'
+    });
+  }
+
+  const connection = await getPool().connect();
+  try {
+    await connection.query('BEGIN');
+    const stateResult = await connection.query('SELECT state_json FROM app_state WHERE id = 1 FOR UPDATE');
+    const state = stateResult.rows[0]?.state_json;
+    if (!state) {
+      await connection.query('ROLLBACK');
+      return response.status(409).json({ error: 'Initialize the client directory before creating portal accounts.' });
+    }
+    const client = (Array.isArray(state.clients) ? state.clients : [])
+      .find(record => String(record?.id) === clientId);
+    if (!client) {
+      await connection.query('ROLLBACK');
+      return response.status(404).json({ error: 'The selected client profile does not exist.' });
+    }
+    const existing = await connection.query(`
+      SELECT id FROM app_users
+      WHERE role = 'client' AND client_id = $1 AND approved = TRUE
+      LIMIT 1
+    `, [clientId]);
+    if (existing.rows.length) {
+      await connection.query('ROLLBACK');
+      return response.status(409).json({ error: 'This client profile already has an active portal account.' });
+    }
+    const created = await connection.query(`
+      INSERT INTO app_users (username, password_hash, role, client_id, approved, display_name, email)
+      VALUES ($1, $2, 'client', $3, TRUE, $4, $5)
+      RETURNING id, username, display_name, email, client_id
+    `, [username, hashPassword(password), clientId, client.name, email]);
+    await connection.query('COMMIT');
+    response.status(201).json({
+      success: true,
+      account: {
+        id: created.rows[0].id,
+        username: created.rows[0].username,
+        displayName: created.rows[0].display_name,
+        email: created.rows[0].email,
+        clientId: created.rows[0].client_id,
+        clientName: client.name
+      }
+    });
+  } catch (error) {
+    await connection.query('ROLLBACK');
+    if (error.code === '23505') {
+      return response.status(409).json({ error: 'That username is already in use.' });
+    }
+    throw error;
+  } finally {
+    connection.release();
+  }
 }));
 
 app.post('/api/admin/client-accounts/:id/approve', asyncRoute(async (request, response) => {
@@ -619,6 +656,15 @@ app.post('/api/admin/client-accounts/:id/approve', asyncRoute(async (request, re
     if (!client) {
       await connection.query('ROLLBACK');
       return response.status(404).json({ error: 'The selected client profile no longer exists.' });
+    }
+    const existing = await connection.query(`
+      SELECT id FROM app_users
+      WHERE role = 'client' AND client_id = $1 AND approved = TRUE
+      LIMIT 1
+    `, [clientId]);
+    if (existing.rows.length) {
+      await connection.query('ROLLBACK');
+      return response.status(409).json({ error: 'This client profile already has an active portal account.' });
     }
     const result = await connection.query(`
       UPDATE app_users
