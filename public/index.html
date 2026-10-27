@@ -645,8 +645,8 @@
 
             <section class="glass-panel space-y-4 rounded-2xl border border-anfac-border p-5">
                 <div>
-                    <h3 class="text-sm font-bold text-white">Client service requests</h3>
-                    <p class="mt-1 text-[11px] text-slate-400">Review client messages and update their request status.</p>
+                    <h3 class="text-sm font-bold text-white">Client & admin chat</h3>
+                    <p class="mt-1 text-[11px] text-slate-400">Reply to client conversations and update their status.</p>
                 </div>
                 <div id="admin-client-requests" class="space-y-3">
                     <p class="text-xs text-slate-500">Loading client requests…</p>
@@ -1401,17 +1401,17 @@
                     <div class="flex items-center gap-3 border-b border-white/[0.06] px-5 py-4 sm:px-6">
                         <span class="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300"><i class="fa-regular fa-comments" aria-hidden="true"></i></span>
                         <div>
-                            <h3 class="text-sm font-bold text-white">Your account team</h3>
-                            <p class="mt-1 text-[10px] text-slate-500">Send a message and follow its progress</p>
+                            <h3 class="text-sm font-bold text-white">Chat with your account team</h3>
+                            <p class="mt-1 text-[10px] text-slate-500">Start a conversation and get replies from ANFAC Media</p>
                         </div>
                     </div>
                     <div class="space-y-4 p-5 sm:p-6">
                         <form id="client-request-form" onsubmit="submitClientRequest(event)" class="space-y-3 rounded-2xl border border-white/[0.06] bg-slate-950/40 p-4">
-                            <label class="block text-[10px] font-semibold text-slate-400">What can we help with?
-                                <input id="client-request-subject" required maxlength="160" placeholder="e.g. Campaign update request" class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10">
+                            <label class="block text-[10px] font-semibold text-slate-400">Conversation subject
+                                <input id="client-request-subject" required maxlength="160" placeholder="e.g. Campaign update" class="mt-1.5 w-full rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10">
                             </label>
                             <label class="block text-[10px] font-semibold text-slate-400">Message
-                                <textarea id="client-request-message" required maxlength="5000" rows="3" placeholder="Tell your account team a little more..." class="mt-1.5 w-full resize-y rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10"></textarea>
+                                <textarea id="client-request-message" required maxlength="5000" rows="3" placeholder="Write your message..." class="mt-1.5 w-full resize-y rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-400/10"></textarea>
                             </label>
                             <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/10 px-4 py-2.5 text-xs font-bold text-sky-200 transition hover:bg-sky-400/20 focus:outline-none focus:ring-2 focus:ring-sky-300">
                                 <i class="fa-regular fa-paper-plane" aria-hidden="true"></i> Send message
@@ -2097,6 +2097,8 @@
         let clientAdSlideIndex = 0;
         let clientAdSlideTimer = null;
         let clientAdSlides = [];
+        let clientChatSignature = '';
+        let adminChatSignature = '';
         let pendingStateSave = Promise.resolve();
         let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
         let selectedCalendarDate = '';
@@ -2255,6 +2257,7 @@
             populateReceiptSelect();
             checkSessionAuth();
             restoreAuthSession();
+            setInterval(pollConversationUpdates, 8000);
         });
 
         // ================= AUTHENTICATION & REAL EXTERNAL EMAIL OTP PASSWORD RESET =================
@@ -2778,6 +2781,7 @@
                 : '<p class="rounded-xl border border-dashed border-slate-700/80 px-3 py-4 text-center text-[10px] text-slate-500">Your booking requests and confirmations will appear here.</p>';
 
             const requests = Array.isArray(state.clientRequests) ? state.clientRequests : [];
+            clientChatSignature = JSON.stringify(requests);
             const openRequests = requests.filter(request =>
                 !['completed', 'closed', 'resolved'].includes(String(request.status || '').toLowerCase())
             );
@@ -2789,11 +2793,44 @@
                             <h4 class="text-xs font-semibold text-white">${escapeHtml(request.subject || 'Support request')}</h4>
                             <span class="rounded-full bg-slate-800 px-2.5 py-1 text-[9px] font-semibold text-sky-200">${escapeHtml(request.status || 'New')}</span>
                         </div>
-                        <p class="mt-2 whitespace-pre-wrap text-[10px] leading-relaxed text-slate-300">${escapeHtml(request.message)}</p>
-                        <p class="mt-3 text-[9px] text-slate-500">${escapeHtml(new Date(request.createdAt).toLocaleString())}</p>
+                        <div class="mt-3 space-y-2">${renderConversationMessages(request, 'client')}</div>
+                        <form class="mt-3 space-y-2" onsubmit="submitConversationMessage(event)" data-request-id="${escapeHtml(request.id)}" data-chat-role="client">
+                            <textarea required maxlength="5000" rows="2" placeholder="Write a reply..." aria-label="Reply to ${escapeHtml(request.subject || 'conversation')}" class="w-full resize-y rounded-xl border border-slate-700/80 bg-slate-900 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400"></textarea>
+                            <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-sky-400/20 bg-sky-400/10 px-3 py-2 text-[10px] font-bold text-sky-200 transition hover:bg-sky-400/20">
+                                <i class="fa-regular fa-paper-plane" aria-hidden="true"></i> Reply
+                            </button>
+                        </form>
                     </article>
                 `).join('')
-                : '<p class="rounded-xl border border-dashed border-slate-700/80 px-3 py-4 text-center text-[10px] text-slate-500">Messages to your account team will appear here.</p>';
+                : '<p class="rounded-xl border border-dashed border-slate-700/80 px-3 py-4 text-center text-[10px] text-slate-500">Start a conversation and your account team will reply here.</p>';
+        }
+
+        function renderConversationMessages(request, viewerRole) {
+            const messages = Array.isArray(request.messages) && request.messages.length
+                ? request.messages
+                : [{
+                    senderRole: 'client',
+                    senderName: request.clientName || 'Client',
+                    text: request.message || '',
+                    createdAt: request.createdAt
+                }];
+            return messages.map(message => {
+                const isOwnMessage = message.senderRole === viewerRole;
+                const senderName = message.senderName || (message.senderRole === 'admin' ? 'ANFAC Media' : request.clientName || 'Client');
+                const timestamp = new Date(message.createdAt || request.createdAt || '');
+                const timeLabel = Number.isNaN(timestamp.getTime()) ? '' : timestamp.toLocaleString();
+                return `
+                    <div class="flex ${isOwnMessage ? 'justify-end' : 'justify-start'}">
+                        <div class="max-w-[90%] rounded-2xl ${isOwnMessage ? 'rounded-br-md border border-sky-400/15 bg-sky-400/10' : 'rounded-bl-md border border-white/[0.06] bg-slate-900/80'} px-3 py-2.5">
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <span class="text-[9px] font-bold ${message.senderRole === 'admin' ? 'text-emerald-300' : 'text-sky-300'}">${escapeHtml(senderName)}</span>
+                                ${timeLabel ? `<time class="text-[8px] text-slate-500">${escapeHtml(timeLabel)}</time>` : ''}
+                            </div>
+                            <p class="mt-1 whitespace-pre-wrap break-words text-[11px] leading-relaxed text-slate-200">${escapeHtml(message.text)}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function focusClientPortalField(fieldId) {
@@ -2893,6 +2930,32 @@
             renderAllViews();
         }
 
+        async function pollConversationUpdates() {
+            if (!backendAuthenticated || document.hidden) return;
+            try {
+                if (state.currentUser?.role === 'client') {
+                    const chatContainer = document.getElementById('client-portal-requests');
+                    if (chatContainer.contains(document.activeElement)) return;
+                    const shared = await requestApi('/api/app-state');
+                    const requests = shared.state?.clientRequests;
+                    if (!Array.isArray(requests)) throw new Error('Could not load client conversations.');
+                    const signature = JSON.stringify(requests);
+                    if (signature !== clientChatSignature) {
+                        state.clientRequests = requests;
+                        renderClientPortal();
+                    }
+                } else if (state.currentUser?.role === 'admin') {
+                    const chatContainer = document.getElementById('admin-client-requests');
+                    if (chatContainer.contains(document.activeElement)) return;
+                    const requests = await requestApi('/api/admin/client-requests');
+                    const signature = JSON.stringify(requests);
+                    if (signature !== adminChatSignature) renderAdminClientRequests(requests);
+                }
+            } catch (error) {
+                console.error('Conversation refresh error:', error);
+            }
+        }
+
         async function submitClientBooking(event) {
             event.preventDefault();
             try {
@@ -2926,6 +2989,36 @@
                 showToast('Your request was sent to ANFAC Media.', 'success');
             } catch (error) {
                 showToast(error.message || 'Could not submit service request.', 'error');
+            }
+        }
+
+        async function submitConversationMessage(event) {
+            event.preventDefault();
+            const form = event.currentTarget;
+            const role = form.dataset.chatRole;
+            const requestId = form.dataset.requestId;
+            const textarea = form.querySelector('textarea');
+            const button = form.querySelector('button[type="submit"]');
+            button.disabled = true;
+            try {
+                const endpoint = role === 'admin'
+                    ? `/api/admin/client-requests/${encodeURIComponent(requestId)}/messages`
+                    : `/api/client/requests/${encodeURIComponent(requestId)}/messages`;
+                await requestApi(endpoint, {
+                    method: 'POST',
+                    body: JSON.stringify({ message: textarea.value })
+                });
+                if (role === 'admin') {
+                    const requests = await requestApi('/api/admin/client-requests');
+                    renderAdminClientRequests(requests);
+                } else {
+                    await refreshClientPortal();
+                }
+                showToast('Message sent.', 'success');
+            } catch (error) {
+                showToast(error.message || 'Could not send your message.', 'error');
+            } finally {
+                if (button.isConnected) button.disabled = false;
             }
         }
 
@@ -3074,22 +3167,29 @@
 
         function renderAdminClientRequests(requests) {
             const container = document.getElementById('admin-client-requests');
+            adminChatSignature = JSON.stringify(requests);
             if (!requests.length) {
-                container.innerHTML = '<p class="text-xs text-slate-500">No client service requests yet.</p>';
+                container.innerHTML = '<p class="text-xs text-slate-500">No client conversations yet.</p>';
                 return;
             }
             container.innerHTML = requests.map(request => `
                 <article class="client-request-card rounded-xl border border-slate-800 bg-slate-900/60 p-4" data-request-id="${escapeHtml(request.id)}">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div class="min-w-0 flex-1">
-                            <h4 class="text-xs font-bold text-white">${escapeHtml(request.subject)}</h4>
-                            <p class="mt-1 text-[10px] text-sky-300">${escapeHtml(request.clientName)} · ${escapeHtml(new Date(request.createdAt).toLocaleString())}</p>
+                            <h4 class="text-xs font-bold text-white">${escapeHtml(request.subject || 'Client conversation')}</h4>
+                            <p class="mt-1 text-[10px] text-sky-300">${escapeHtml(request.clientName || 'Client')} · ${escapeHtml(request.clientId || '')}</p>
                         </div>
                         <select class="client-request-status rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-[10px] text-white">
                             ${['New', 'In Progress', 'Completed'].map(status => `<option ${request.status === status ? 'selected' : ''}>${status}</option>`).join('')}
                         </select>
                     </div>
-                    <p class="mt-3 whitespace-pre-wrap text-xs leading-relaxed text-slate-300">${escapeHtml(request.message)}</p>
+                    <div class="mt-3 space-y-2">${renderConversationMessages(request, 'admin')}</div>
+                    <form class="mt-3 space-y-2" onsubmit="submitConversationMessage(event)" data-request-id="${escapeHtml(request.id)}" data-chat-role="admin">
+                        <textarea required maxlength="5000" rows="2" placeholder="Reply to ${escapeHtml(request.clientName || 'client')}..." aria-label="Reply to ${escapeHtml(request.subject || 'conversation')}" class="w-full resize-y rounded-xl border border-slate-700/80 bg-slate-950 px-3 py-2.5 text-xs text-white outline-none transition focus:border-sky-400"></textarea>
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-xl border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-[10px] font-bold text-emerald-200 transition hover:bg-emerald-400/20">
+                            <i class="fa-regular fa-paper-plane" aria-hidden="true"></i> Send reply
+                        </button>
+                    </form>
                 </article>
             `).join('');
             container.querySelectorAll('.client-request-status').forEach(select => {

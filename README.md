@@ -20,7 +20,10 @@ Partners**, where each login is linked directly to an existing client profile.
 Administrators share the username and temporary password with the client
 securely. Clients use **Client? Sign in to your portal** on the sign-in screen
 to access their linked projects, campaigns, and bookings; request bookings or
-services; and update their account settings. Administrators can add campaign
+services; chat with their account team; and update their account settings.
+Administrators can reply to client conversations in **Clients & Media
+Partners**. Conversations are stored with the linked client profile and refresh
+automatically while each side is signed in. Administrators can add campaign
 artwork when creating or editing a campaign; non-completed campaigns with
 artwork appear in that client's rotating home slider. Clients must enter their
 current password to save profile changes. The portal does not expose billing

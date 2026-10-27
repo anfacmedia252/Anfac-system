@@ -368,14 +368,23 @@ app.post('/api/client/requests', roleRoute('client', async (request, response) =
         throw error;
       }
       if (!Array.isArray(state.clientRequests)) state.clientRequests = [];
+      const createdAt = new Date().toISOString();
       const newRequest = {
         id: crypto.randomUUID(),
         clientId: client.id,
         clientName: client.name,
         subject,
         message,
+        messages: [{
+          id: crypto.randomUUID(),
+          senderRole: 'client',
+          senderName: request.user.displayName || request.user.username,
+          text: message,
+          createdAt
+        }],
         status: 'New',
-        createdAt: new Date().toISOString()
+        createdAt,
+        updatedAt: createdAt
       };
       state.clientRequests.unshift(newRequest);
       return newRequest;
@@ -385,6 +394,49 @@ app.post('/api/client/requests', roleRoute('client', async (request, response) =
     throw error;
   }
   response.status(201).json({ success: true, request: clientRequest });
+}));
+
+app.post('/api/client/requests/:id/messages', roleRoute('client', async (request, response) => {
+  const text = typeof request.body.message === 'string' ? request.body.message.trim() : '';
+  if (!text || text.length > 5000) {
+    return response.status(400).json({ error: 'Enter a message of up to 5,000 characters.' });
+  }
+  try {
+    const message = await updateSharedState(state => {
+      const clientRequest = (Array.isArray(state.clientRequests) ? state.clientRequests : [])
+        .find(item => item.id === request.params.id && item.clientId === request.user.clientId);
+      if (!clientRequest) {
+        const error = new Error('Conversation not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (!Array.isArray(clientRequest.messages)) {
+        clientRequest.messages = [{
+          id: crypto.randomUUID(),
+          senderRole: 'client',
+          senderName: clientRequest.clientName || 'Client',
+          text: String(clientRequest.message || ''),
+          createdAt: clientRequest.createdAt || new Date().toISOString()
+        }];
+      }
+      const createdAt = new Date().toISOString();
+      const newMessage = {
+        id: crypto.randomUUID(),
+        senderRole: 'client',
+        senderName: request.user.displayName || request.user.username,
+        text,
+        createdAt
+      };
+      clientRequest.messages.push(newMessage);
+      clientRequest.updatedAt = createdAt;
+      if (clientRequest.status === 'Completed') clientRequest.status = 'In Progress';
+      return newMessage;
+    });
+    response.status(201).json({ success: true, message });
+  } catch (error) {
+    if (error.statusCode) return response.status(error.statusCode).json({ error: error.message });
+    throw error;
+  }
 }));
 
 app.get('/api/app-state', asyncRoute(async (request, response) => {
@@ -724,6 +776,49 @@ app.patch('/api/admin/client-requests/:id', asyncRoute(async (request, response)
     throw error;
   }
   response.json({ success: true });
+}));
+
+app.post('/api/admin/client-requests/:id/messages', asyncRoute(async (request, response) => {
+  const text = typeof request.body.message === 'string' ? request.body.message.trim() : '';
+  if (!text || text.length > 5000) {
+    return response.status(400).json({ error: 'Enter a message of up to 5,000 characters.' });
+  }
+  try {
+    const message = await updateSharedState(state => {
+      const clientRequest = (Array.isArray(state.clientRequests) ? state.clientRequests : [])
+        .find(item => item.id === request.params.id);
+      if (!clientRequest) {
+        const error = new Error('Conversation not found.');
+        error.statusCode = 404;
+        throw error;
+      }
+      if (!Array.isArray(clientRequest.messages)) {
+        clientRequest.messages = [{
+          id: crypto.randomUUID(),
+          senderRole: 'client',
+          senderName: clientRequest.clientName || 'Client',
+          text: String(clientRequest.message || ''),
+          createdAt: clientRequest.createdAt || new Date().toISOString()
+        }];
+      }
+      const createdAt = new Date().toISOString();
+      const newMessage = {
+        id: crypto.randomUUID(),
+        senderRole: 'admin',
+        senderName: 'ANFAC Media',
+        text,
+        createdAt
+      };
+      clientRequest.messages.push(newMessage);
+      clientRequest.updatedAt = createdAt;
+      if (clientRequest.status === 'New') clientRequest.status = 'In Progress';
+      return newMessage;
+    });
+    response.status(201).json({ success: true, message });
+  } catch (error) {
+    if (error.statusCode) return response.status(error.statusCode).json({ error: error.message });
+    throw error;
+  }
 }));
 
 app.get('/api/transactions', asyncRoute(async (request, response) => {
