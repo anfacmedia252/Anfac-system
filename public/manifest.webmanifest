@@ -1,0 +1,31 @@
+{
+  "id": "/",
+  "name": "ANFAC Media System",
+  "short_name": "ANFAC Media",
+  "description": "ANFAC Media client and team workspace",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070c18",
+  "theme_color": "#070c18",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    }
+  ]
+}

@@ -29,6 +29,13 @@ artwork appear in that client's rotating home slider. Clients must enter their
 current password to save profile changes. The portal does not expose billing
 or payment records.
 
+## Install on Android
+
+Open the production site in Chrome, then select **Install app** when prompted.
+If the prompt is not shown, use Chrome's menu and select **Install app** or
+**Add to Home screen**. The app shell can show an offline notice, but signing in
+and loading workspace data requires an internet connection.
+
 ## Deploying
 
 Link the repository to the Vercel project and configure `DATABASE_URL` for its

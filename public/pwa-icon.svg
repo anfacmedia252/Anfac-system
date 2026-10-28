@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#070c18"/>
+  <circle cx="256" cy="256" r="220" fill="#fff" stroke="#1a1b4b" stroke-width="12"/>
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#e6392e" stroke-width="5"/>
+  <path d="M225 76h40l78 202h-54l-23-54h-47l-73 37z" fill="#e6392e"/>
+  <circle cx="242" cy="151" r="24" fill="#fff"/>
+  <path d="M238 139v24l18-12z" fill="#e6392e"/>
+  <path d="m122 300 92-116 29 22 61-70-14-13 63-18-18 65-13-13-75 94-31-24z" fill="#1a1b4b"/>
+  <text x="246" y="376" text-anchor="middle" fill="#e6392e" font-family="Arial,sans-serif" font-size="61" font-weight="900" letter-spacing="1">ANFAC</text>
+  <text x="309" y="421" text-anchor="middle" fill="#1a1b4b" font-family="Arial,sans-serif" font-size="44" font-weight="700">Media</text>
+</svg>

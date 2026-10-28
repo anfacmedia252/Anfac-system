@@ -3,6 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#070c18">
+    <meta name="application-name" content="ANFAC Media System">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ANFAC Media">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/svg+xml" href="/pwa-icon.svg">
+    <link rel="apple-touch-icon" href="/pwa-icon-192.png">
     <title>ANFAC Media System - Executive Enterprise Dashboard</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -136,6 +143,9 @@
                     Client? Sign in to your portal
                 </button>
             </form>
+            <button type="button" data-pwa-install aria-label="Install ANFAC Media app" class="hidden w-full items-center justify-center gap-2 rounded-xl border border-sky-400/30 bg-sky-400/10 px-3 py-2.5 text-xs font-bold text-sky-200 transition hover:bg-sky-400/20">
+                <i class="fa-solid fa-download" aria-hidden="true"></i> Install ANFAC Media app
+            </button>
 
             <!-- ADMIN PASSWORD RESET: STEP 1 (REQUEST REAL EMAIL OTP) -->
             <form id="forgot-step1-panel" onsubmit="handleSendResetOtp(event)" class="hidden space-y-4 text-left text-xs">
@@ -335,6 +345,9 @@
             <div class="flex items-center space-x-3 pl-4 shrink-0 ml-auto">
                 <button id="manual-save-all-button" onclick="manualSaveAll()" class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5" title="Save all data to browser database">
                     <i class="fa-solid fa-floppy-disk"></i> <span class="hidden sm:inline">Save All Data</span>
+                </button>
+                <button id="pwa-install-button" data-pwa-install type="button" aria-label="Install ANFAC Media app" class="hidden items-center gap-1.5 rounded-xl border border-sky-400/30 bg-sky-400/10 px-2.5 py-2 text-[10px] font-bold text-sky-200 transition hover:bg-sky-400/20 sm:px-3">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i> <span class="hidden sm:inline">Install app</span>
                 </button>
 
                 <div class="hidden sm:flex flex-col text-right">
@@ -2094,6 +2107,7 @@
         let activeResetOtp = null;
         let backendAuthenticated = false;
         let loginMode = 'admin';
+        let deferredInstallPrompt = null;
         let clientAdSlideIndex = 0;
         let clientAdSlideTimer = null;
         let clientAdSlides = [];
@@ -2258,7 +2272,52 @@
             checkSessionAuth();
             restoreAuthSession();
             setInterval(pollConversationUpdates, 8000);
+            initializePwa();
         });
+
+        function initializePwa() {
+            const installButtons = document.querySelectorAll('[data-pwa-install]');
+            const setInstallButtonsVisible = visible => installButtons.forEach(button => {
+                button.classList.toggle('hidden', !visible);
+                button.classList.toggle('inline-flex', visible);
+            });
+            const isInstalled = window.matchMedia('(display-mode: standalone)').matches ||
+                navigator.standalone === true;
+            if (!isInstalled) {
+                window.addEventListener('beforeinstallprompt', event => {
+                    event.preventDefault();
+                    deferredInstallPrompt = event;
+                    setInstallButtonsVisible(true);
+                });
+                window.addEventListener('appinstalled', () => {
+                    deferredInstallPrompt = null;
+                    setInstallButtonsVisible(false);
+                });
+            }
+            installButtons.forEach(installButton => installButton.addEventListener('click', async () => {
+                if (!deferredInstallPrompt) {
+                    showToast('In Chrome, open the menu and choose Install app or Add to Home screen.', 'info');
+                    return;
+                }
+                const installPrompt = deferredInstallPrompt;
+                deferredInstallPrompt = null;
+                setInstallButtonsVisible(false);
+                try {
+                    await installPrompt.prompt();
+                    const choice = await installPrompt.userChoice;
+                    if (choice.outcome === 'accepted') {
+                        showToast('ANFAC Media was installed.', 'success');
+                    }
+                } catch (error) {
+                    console.error('PWA installation error:', error);
+                    showToast('Could not start installation. Use the Chrome menu to install the app.', 'error');
+                }
+            }));
+            if ('serviceWorker' in navigator && window.isSecureContext) {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .catch(error => console.error('Service worker registration error:', error));
+            }
+        }
 
         // ================= AUTHENTICATION & REAL EXTERNAL EMAIL OTP PASSWORD RESET =================
         function checkSessionAuth() {
