@@ -613,6 +613,148 @@ app.use('/api', asyncRoute(authenticate), (request, response, next) => {
   requireAdmin(request, response, next);
 });
 
+function staffAccountFields(body, requirePassword) {
+  const id = typeof body.id === 'string' ? body.id.trim() : '';
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const username = typeof body.username === 'string' ? body.username.trim().toLowerCase() : '';
+  const password = typeof body.password === 'string' ? body.password : '';
+  const department = typeof body.department === 'string' ? body.department.trim() : '';
+  const role = typeof body.role === 'string' ? body.role.trim() : '';
+  const salary = Number(body.salary);
+  const photo = typeof body.photo === 'string' ? body.photo : '';
+  const dailyTasks = Array.isArray(body.dailyTasks) ? body.dailyTasks
+    .filter(task => task && typeof task.title === 'string' && task.title.trim())
+    .slice(0, 100)
+    .map(task => ({ title: task.title.trim().slice(0, 300), done: Boolean(task.done) })) : [];
+  if (!id || id.length > 100 || !name || name.length > 100 ||
+      !/^[a-z0-9._-]{3,100}$/.test(username) ||
+      !department || department.length > 100 || !role || role.length > 100 ||
+      !Number.isFinite(salary) || salary < 0 || photo.length > 10_000_000 ||
+      (requirePassword && (password.length < 8 || password.length > 256)) ||
+      (!requirePassword && password && (password.length < 8 || password.length > 256))) {
+    throw Object.assign(new Error('Enter valid staff details, a username, and a password of at least 8 characters.'), { statusCode: 400 });
+  }
+  return { id, name, username, password, department, role, salary, photo, dailyTasks };
+}
+
+app.post('/api/admin/staff-accounts', asyncRoute(async (request, response) => {
+  let fields;
+  try {
+    fields = staffAccountFields(request.body, true);
+  } catch (error) {
+    return response.status(error.statusCode || 400).json({ error: error.message });
+  }
+  const connection = await getPool().connect();
+  try {
+    await connection.query('BEGIN');
+    const stateResult = await connection.query('SELECT state_json FROM app_state WHERE id = 1 FOR UPDATE');
+    const state = stateResult.rows[0]?.state_json;
+    if (!state) throw Object.assign(new Error('Shared app data has not been initialized.'), { statusCode: 409 });
+    const staff = Array.isArray(state.staff) ? state.staff : [];
+    if (staff.some(member => member.id === fields.id)) {
+      throw Object.assign(new Error('That staff ID already exists.'), { statusCode: 409 });
+    }
+    await connection.query(`
+      INSERT INTO app_users (username, password_hash, role, staff_id, display_name)
+      VALUES ($1, $2, 'staff', $3, $4)
+    `, [fields.username, hashPassword(fields.password), fields.id, fields.name]);
+    const { password, ...member } = fields;
+    staff.unshift(member);
+    state.staff = staff;
+    await connection.query(`UPDATE app_state SET state_json = $1::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = 1`, [JSON.stringify(state)]);
+    await connection.query('COMMIT');
+    response.status(201).json({ staff: member });
+  } catch (error) {
+    await connection.query('ROLLBACK');
+    if (error.code === '23505') return response.status(409).json({ error: 'That username or staff ID is already in use.' });
+    if (error.statusCode) return response.status(error.statusCode).json({ error: error.message });
+    throw error;
+  } finally {
+    connection.release();
+  }
+}));
+
+app.put('/api/admin/staff-accounts/:id', asyncRoute(async (request, response) => {
+  const staffId = request.params.id;
+  let fields;
+  try {
+    fields = staffAccountFields({ ...request.body, id: staffId }, false);
+  } catch (error) {
+    return response.status(error.statusCode || 400).json({ error: error.message });
+  }
+  const connection = await getPool().connect();
+  try {
+    await connection.query('BEGIN');
+    const stateResult = await connection.query('SELECT state_json FROM app_state WHERE id = 1 FOR UPDATE');
+    const state = stateResult.rows[0]?.state_json;
+    if (!state) throw Object.assign(new Error('Shared app data has not been initialized.'), { statusCode: 409 });
+    const staff = Array.isArray(state.staff) ? state.staff : [];
+    const index = staff.findIndex(member => member.id === staffId);
+    if (index === -1) throw Object.assign(new Error('Staff record not found.'), { statusCode: 404 });
+    const existingTasks = Array.isArray(staff[index].dailyTasks) ? staff[index].dailyTasks : [];
+    const passwordHash = fields.password ? hashPassword(fields.password) : null;
+    const accountResult = await connection.query(`
+      UPDATE app_users
+      SET username = $1,
+          password_hash = COALESCE($2, password_hash),
+          display_name = $3
+      WHERE staff_id = $4 AND role = 'staff'
+      RETURNING id
+    `, [fields.username, passwordHash, fields.name, staffId]);
+    if (!accountResult.rows.length) {
+      if (!fields.password) {
+        throw Object.assign(new Error('This staff login account is missing. Enter a new password of at least 8 characters to restore it.'), { statusCode: 400 });
+      }
+      await connection.query(`
+        INSERT INTO app_users (username, password_hash, role, staff_id, display_name)
+        VALUES ($1, $2, 'staff', $3, $4)
+      `, [fields.username, passwordHash, staffId, fields.name]);
+    }
+    const { password, ...safeFields } = fields;
+    safeFields.dailyTasks = safeFields.dailyTasks.map(task => {
+      const existing = existingTasks.find(item => item.title === task.title);
+      return existing ? { ...task, done: Boolean(existing.done) } : task;
+    });
+    staff[index] = { ...staff[index], ...safeFields };
+    state.staff = staff;
+    await connection.query(`UPDATE app_state SET state_json = $1::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = 1`, [JSON.stringify(state)]);
+    await connection.query('COMMIT');
+    response.json({ staff: staff[index] });
+  } catch (error) {
+    await connection.query('ROLLBACK');
+    if (error.code === '23505') return response.status(409).json({ error: 'That username is already in use.' });
+    if (error.statusCode) return response.status(error.statusCode).json({ error: error.message });
+    throw error;
+  } finally {
+    connection.release();
+  }
+}));
+
+app.delete('/api/admin/staff-accounts/:id', asyncRoute(async (request, response) => {
+  const connection = await getPool().connect();
+  try {
+    await connection.query('BEGIN');
+    const stateResult = await connection.query('SELECT state_json FROM app_state WHERE id = 1 FOR UPDATE');
+    const state = stateResult.rows[0]?.state_json;
+    if (!state) throw Object.assign(new Error('Shared app data has not been initialized.'), { statusCode: 409 });
+    const staff = Array.isArray(state.staff) ? state.staff : [];
+    if (!staff.some(member => member.id === request.params.id)) {
+      throw Object.assign(new Error('Staff record not found.'), { statusCode: 404 });
+    }
+    await connection.query("DELETE FROM app_users WHERE role = 'staff' AND staff_id = $1", [request.params.id]);
+    state.staff = staff.filter(member => member.id !== request.params.id);
+    await connection.query(`UPDATE app_state SET state_json = $1::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = 1`, [JSON.stringify(state)]);
+    await connection.query('COMMIT');
+    response.json({ success: true });
+  } catch (error) {
+    await connection.query('ROLLBACK');
+    if (error.statusCode) return response.status(error.statusCode).json({ error: error.message });
+    throw error;
+  } finally {
+    connection.release();
+  }
+}));
+
 app.get('/api/admin/client-accounts', asyncRoute(async (request, response) => {
   const result = await getPool().query(`
     SELECT id, username, display_name, email, client_id, approved, created_at

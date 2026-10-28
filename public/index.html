@@ -2177,14 +2177,14 @@
             }
         }
 
-        function saveStorage() {
+        function saveStorage(syncServer = true) {
             try {
                 const localState = JSON.parse(JSON.stringify(state));
                 delete localState.currentUser;
                 delete localState.adminAuth;
                 localState.staff = (localState.staff || []).map(({ password, ...staff }) => staff);
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(localState));
-                if (backendAuthenticated && state.currentUser?.role !== 'client') {
+                if (syncServer && backendAuthenticated && state.currentUser?.role !== 'client') {
                     const payload = JSON.stringify(state);
                     pendingStateSave = pendingStateSave
                         .then(async () => {
@@ -4981,17 +4981,17 @@
                 document.getElementById('st-photo-preview').src = compressedUrl;
             });
         }
-        function handleStaffSubmit(e) {
+        async function handleStaffSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('st-id').value;
             const name = document.getElementById('st-name').value.trim();
             const username = document.getElementById('st-username').value.trim();
-            const password = document.getElementById('st-password').value.trim();
+            const password = document.getElementById('st-password').value;
             const department = document.getElementById('st-department').value;
             const role = document.getElementById('st-role').value.trim();
             const salary = parseFloat(document.getElementById('st-salary').value) || 0;
             const photo = document.getElementById('st-photo-data').value || `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0d9488&color=fff&size=200`;
-            const rawTasks = document.getElementById('st-tasks').value.split(',').map(t => t.trim()).filter(Boolean);
+            const dailyTasks = document.getElementById('st-tasks').value.split(',').map(title => title.trim()).filter(Boolean).map(title => ({ title, done: false }));
 
             if (password && password.length < 8) {
                 showToast('Passwords must be at least 8 characters.', 'error');
@@ -5006,38 +5006,52 @@
                 return;
             }
 
-            if (id) {
-                const idx = state.staff.findIndex(s => s.id === id);
-                if (idx !== -1) {
-                    const existingTasks = state.staff[idx].dailyTasks || [];
-                    const updatedTasks = rawTasks.map(title => {
-                        const found = existingTasks.find(et => et.title === title);
-                        return found ? found : { title, done: false };
-                    });
-                    state.staff[idx] = { ...state.staff[idx], name, username, department, role, salary, photo, dailyTasks: updatedTasks };
-                    if (password) state.staff[idx].password = password;
-                }
-            } else {
-                const dailyTasks = rawTasks.map(title => ({ title, done: false }));
-                let newStaffId;
+            let staffId = id;
+            if (!staffId) {
                 do {
-                    newStaffId = 'ST-' + Math.floor(100 + Math.random() * 900);
-                } while (state.staff.some(s => s.id === newStaffId));
-                state.staff.unshift({ id: newStaffId, name, username, password, department, role, salary, photo, dailyTasks });
+                    staffId = 'ST-' + Math.floor(100 + Math.random() * 900);
+                } while (state.staff.some(s => s.id === staffId));
             }
-            saveStorage();
-            closeStaffModal();
-            populateStaffSelectors();
-            renderStaffGrid();
-            showToast(`Staff member "${name}" & login credentials saved!`, 'success');
+            const body = { id: staffId, name, username, password, department, role, salary, photo, dailyTasks };
+            const submitButton = e.submitter;
+            if (submitButton) submitButton.disabled = true;
+            try {
+                const response = await fetch(id ? `/api/admin/staff-accounts/${encodeURIComponent(id)}` : '/api/admin/staff-accounts', {
+                    method: id ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Could not save the staff account.');
+                const savedStaff = result.staff;
+                const index = state.staff.findIndex(member => member.id === savedStaff.id);
+                if (index === -1) state.staff.unshift(savedStaff);
+                else state.staff[index] = savedStaff;
+                saveStorage(false);
+                closeStaffModal();
+                populateStaffSelectors();
+                renderStaffGrid();
+                showToast(`Staff member "${name}" & login credentials saved!`, 'success');
+            } catch (error) {
+                showToast(error.message || 'Could not save the staff account.', 'error');
+            } finally {
+                if (submitButton) submitButton.disabled = false;
+            }
         }
-        function deleteStaff(id) {
-            if (!confirm('Remove this staff record?')) return;
-            state.staff = state.staff.filter(s => s.id !== id);
-            saveStorage();
-            populateStaffSelectors();
-            renderStaffGrid();
-            showToast('Staff record removed', 'info');
+        async function deleteStaff(id) {
+            if (!confirm('Remove this staff record and login account?')) return;
+            try {
+                const response = await fetch(`/api/admin/staff-accounts/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Could not remove the staff account.');
+                state.staff = state.staff.filter(s => s.id !== id);
+                saveStorage(false);
+                populateStaffSelectors();
+                renderStaffGrid();
+                showToast('Staff record and login account removed', 'info');
+            } catch (error) {
+                showToast(error.message || 'Could not remove the staff account.', 'error');
+            }
         }
 
         // Profile

@@ -13,6 +13,16 @@ data. The browser assets are in `public/`.
 The deployment database must contain a provisioned administrator account.
 The application does not create a default-password administrator.
 
+## Staff accounts
+
+Administrators can create or edit staff credentials in **Staff Accounts**. The
+server saves each staff profile and login in one atomic database transaction;
+passwords are hashed and are never retained in shared application state. New
+passwords require at least eight characters. Editing a staff profile preserves
+the current password unless a replacement is entered. Removing a staff member
+removes both the profile and login, ending the account's sessions. Staff users
+only receive their assigned tasks, reports, profile, and equipment.
+
 ## Client portal
 
 Client accounts are created by an administrator in **Clients & Media
